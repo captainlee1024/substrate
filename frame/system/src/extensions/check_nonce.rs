@@ -58,6 +58,9 @@ impl<T: Config> sp_std::fmt::Debug for CheckNonce<T> {
 	}
 }
 
+// CheckNonce 实际上在执行SignedExtension的交易
+// 这个交易允许你使用这些hook去执行一些操作在这笔交易上执行
+// 并且会影响将要发生的一些事情(交易本身要做的事情)
 impl<T: Config> SignedExtension for CheckNonce<T>
 where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo>,
@@ -72,6 +75,10 @@ where
 		Ok(())
 	}
 
+	// 这是在外部交易执行期间调用的
+	// 所以需要一些额外的检查
+	// 比如这里的逻辑删除的话
+	// 块里交易的随机数都检查不出来了
 	fn pre_dispatch(
 		self,
 		who: &Self::AccountId,
@@ -80,19 +87,27 @@ where
 		_len: usize,
 	) -> Result<(), TransactionValidityError> {
 		let mut account = crate::Account::<T>::get(who);
+		// 我们检查账户的state nonce
+		// 如果和预期的account nonce from state 就返回错误提示
 		if self.0 != account.nonce {
 			return Err(if self.0 < account.nonce {
+				// 过时 表示已经被包含或者已经有一个相同nonce的tx了
 				InvalidTransaction::Stale
 			} else {
+				// 未来可能有效, 但是预期的下一个交易到当前交易之前应该有一些其他的交易
 				InvalidTransaction::Future
 			}
 			.into())
 		}
 		account.nonce += T::Index::one();
+		// 验证通过后, 在这里更新账户nonce
 		crate::Account::<T>::insert(who, account);
 		Ok(())
 	}
 
+	// txpool每次要确定一个交易是否有效都会调用它
+	// validate 是被交易吃调用在一个交易进入到交易池的时候,并且可能会调用多次
+	// pre_dispatch也会调用它
 	fn validate(
 		&self,
 		who: &Self::AccountId,
@@ -101,18 +116,23 @@ where
 		_len: usize,
 	) -> TransactionValidity {
 		// check index
+		// 校验是否过时
 		let account = crate::Account::<T>::get(who);
 		if self.0 < account.nonce {
 			return InvalidTransaction::Stale.into()
 		}
 
+		//
 		let provides = vec![Encode::encode(&(who, self.0))];
+		// 对于账户模型的系统,我们需要包含一个交易, 就是前一个交易
 		let requires = if account.nonce < self.0 {
 			vec![Encode::encode(&(who, self.0 - One::one()))]
 		} else {
 			vec![]
 		};
 
+		// 返回这个ValidTransaction对象
+		// 最终会吧所有的拓展验证集中到一起进行交易验证
 		Ok(ValidTransaction {
 			priority: 0,
 			requires,
