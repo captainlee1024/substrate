@@ -116,6 +116,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// 从上到下阅读该模块, 它代表了一个常见的流程, 非常便于理解
 use codec::{Codec, Encode};
 use frame_support::{
 	dispatch::{DispatchClass, DispatchInfo, GetDispatchInfo, PostDispatchInfo},
@@ -203,6 +204,8 @@ where
 	OriginOf<Block::Extrinsic, Context>: From<Option<System::AccountId>>,
 	UnsignedValidator: ValidateUnsigned<Call = CallOf<Block::Extrinsic, Context>>,
 {
+	// execute_block将开启整个调度流程
+	// 它会调用另一个execute_block
 	fn execute_block(block: Block) {
 		Executive::<
 			System,
@@ -414,6 +417,7 @@ where
 	}
 
 	/// Start the execution of a particular block.
+	/// 2. 一个块的开端, 初始化一个块的时候我们会处理header等一些必须处理的事情
 	pub fn initialize_block(header: &frame_system::pallet_prelude::HeaderFor<System>) {
 		sp_io::init_tracing();
 		sp_tracing::enter_span!(sp_tracing::Level::TRACE, "init_block");
@@ -421,6 +425,7 @@ where
 		Self::initialize_block_impl(header.number(), header.parent_hash(), &digests);
 	}
 
+	// 3. 然后我们用摘要做一些事情
 	fn extract_pre_digest(header: &frame_system::pallet_prelude::HeaderFor<System>) -> Digest {
 		let mut digest = <Digest>::default();
 		header.digest().logs().iter().for_each(|d| {
@@ -431,6 +436,8 @@ where
 		digest
 	}
 
+	// 如果做pallet开发, 可以使用initialize function 允许在每个块初始化的时候执行一些逻辑
+	// 比如你可以放一些  每隔几个块想去做的事情或者数据迁移啥的
 	fn initialize_block_impl(
 		block_number: &BlockNumberFor<System>,
 		parent_hash: &System::Hash,
@@ -445,6 +452,8 @@ where
 		if Self::runtime_upgraded() {
 			weight = weight.saturating_add(Self::execute_on_runtime_upgrade());
 		}
+		// AllPalletsWithSystem 是指construct_runtime!中包含的所有pallet
+		// 它会按照预定顺序依次检查每个pallet中是否有实现OnInitalize方法, 并且调用它
 		<frame_system::Pallet<System>>::initialize(block_number, parent_hash, digest);
 		weight = weight.saturating_add(<AllPalletsWithSystem as OnInitialize<
 			BlockNumberFor<System>,
@@ -475,6 +484,8 @@ where
 		}
 	}
 
+	// 做一些init的检查
+	// 比如extrinsic root是否正确
 	fn initial_checks(block: &Block) {
 		sp_tracing::enter_span!(sp_tracing::Level::TRACE, "initial_checks");
 		let header = block.header();
@@ -494,6 +505,7 @@ where
 	}
 
 	/// Actually execute all transitions for `block`.
+	/// 4. 执行区块
 	pub fn execute_block(block: Block) {
 		sp_io::init_tracing();
 		sp_tracing::within_span! {
@@ -506,19 +518,24 @@ where
 
 			// execute extrinsics
 			let (header, extrinsics) = block.deconstruct();
+			// 做完检查后开始执行块里的交易
 			Self::execute_extrinsics_with_book_keeping(extrinsics, *header.number());
 
 			// any final checks
+			// 块执行完毕之后的一些检查
 			Self::final_checks(&header);
 		}
 	}
 
 	/// Execute given extrinsics and take care of post-extrinsics book-keeping.
+	/// 执行一个区块的交易
 	fn execute_extrinsics_with_book_keeping(
 		extrinsics: Vec<Block::Extrinsic>,
 		block_number: NumberFor<Block>,
 	) {
+		// 迭代块中的交易依次apply(执行)
 		extrinsics.into_iter().for_each(|e| {
+			// 执行一笔交易
 			if let Err(e) = Self::apply_extrinsic(e) {
 				let err: &'static str = e.into();
 				panic!("{}", err)
@@ -533,9 +550,11 @@ where
 
 	/// Finalize the block - it is up the caller to ensure that all header fields are valid
 	/// except state-root.
+	/// 这里
 	pub fn finalize_block() -> frame_system::pallet_prelude::HeaderFor<System> {
 		sp_io::init_tracing();
 		sp_tracing::enter_span!(sp_tracing::Level::TRACE, "finalize_block");
+		// 这里调用 system的note_finished_extrinsics
 		<frame_system::Pallet<System>>::note_finished_extrinsics();
 		let block_number = <frame_system::Pallet<System>>::block_number();
 
@@ -567,6 +586,7 @@ where
 	///
 	/// This doesn't attempt to validate anything regarding the block, but it builds a list of uxt
 	/// hashes.
+	/// 执行一笔交易
 	pub fn apply_extrinsic(uxt: Block::Extrinsic) -> ApplyExtrinsicResult {
 		sp_io::init_tracing();
 		let encoded = uxt.encode();
@@ -584,7 +604,9 @@ where
 		// AUDIT: Under no circumstances may this function panic from here onwards.
 
 		// Decode parameters and dispatch
+		// 解析参数和function调度器
 		let dispatch_info = xt.get_dispatch_info();
+		// 在调度之前执行所需的所有必要逻辑，并解构为函数调用、索引和发送方
 		let r = Applyable::apply::<UnsignedValidator>(xt, &dispatch_info, encoded_len)?;
 
 		// Mandatory(inherents) are not allowed to fail.
@@ -595,6 +617,9 @@ where
 			return Err(InvalidTransaction::BadMandatory.into())
 		}
 
+		// 在应用外联函数后立即调用。
+		// 根据结果发出 ExtrinsicSuccess or ExtrinsicFailed 事件。
+		// 发出的事件包含调度后更正的权重，包括其调度类的基本权重。
 		<frame_system::Pallet<System>>::note_applied_extrinsic(&r, dispatch_info);
 
 		Ok(r.map(|_| ()).map_err(|e| e.error))
@@ -672,6 +697,7 @@ where
 	}
 
 	/// Start an offchain worker and generate extrinsics.
+	/// 这个函数会按顺序调用所有pallet的offchain_worker函数
 	pub fn offchain_worker(header: &frame_system::pallet_prelude::HeaderFor<System>) {
 		sp_io::init_tracing();
 		// We need to keep events available for offchain workers,
