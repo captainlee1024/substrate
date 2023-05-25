@@ -1550,6 +1550,7 @@ pub trait SignedExtension:
 	/// It can only be used safely when you *know* that the extrinsic is one that can only be
 	/// introduced by the current block author; generally this implies that it is an inherent and
 	/// will come from either an offchain-worker or via `InherentData`.
+	/// 交易执行后想做的一些事情, 默认情况下不做任何事情
 	fn post_dispatch(
 		_pre: Option<Self::Pre>,
 		_info: &DispatchInfoOf<Self::Call>,
@@ -1568,6 +1569,8 @@ pub trait SignedExtension:
 	///
 	/// This method provides a default implementation that returns a vec containing a single
 	/// [`SignedExtensionMetadata`].
+	/// 一些元数据
+	/// 比如构建UI时可以通过这些元数据告诉UI该runtime 的signedExtension时什么
 	fn metadata() -> Vec<SignedExtensionMetadata> {
 		sp_std::vec![SignedExtensionMetadata {
 			identifier: Self::IDENTIFIER,

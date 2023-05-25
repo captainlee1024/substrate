@@ -2103,10 +2103,17 @@ pub type BlockId = generic::BlockId<Block>;
 /// When you change this, you **MUST** modify [`sign`] in `bin/node/testing/src/keyring.rs`!
 ///
 /// [`sign`]: <../../testing/src/keyring.rs.html>
+/// 这些都会attach到每一笔签名交易中
+/// 让我们看一下CheckNonce做了些什么
+/// 如果我们有什么验证逻辑想给每个pallet的交易使用
+/// 我们就可以将它们放到SignedExtra的列表中
+/// 它会为每个交易插入这个验证机制
 pub type SignedExtra = (
+	// 检查版本
 	frame_system::CheckNonZeroSender<Runtime>,
 	frame_system::CheckSpecVersion<Runtime>,
 	frame_system::CheckTxVersion<Runtime>,
+	// 检查创世块哈希
 	frame_system::CheckGenesis<Runtime>,
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,

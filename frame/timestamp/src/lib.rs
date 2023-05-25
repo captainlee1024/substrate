@@ -223,6 +223,10 @@ pub mod pallet {
 		const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
 
 		fn create_inherent(data: &InherentData) -> Option<Self::Call> {
+			// 这里我们创建了inherent tx 即一个时间戳tx 它用来给当前块加一个时间戳
+			// 该tx不会被广播, 因为大家时间不一样验证不会通过
+			// 但是我们可以给一些其他的校验方式,比如不小于前一个块的时间戳
+			// 我们把它写在check_inherent中
 			let inherent_data = data
 				.get_data::<InherentType>(&INHERENT_IDENTIFIER)
 				.expect("Timestamp inherent data not correctly encoded")

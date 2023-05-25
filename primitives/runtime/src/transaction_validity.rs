@@ -251,17 +251,24 @@ pub enum TransactionSource {
 }
 
 /// Information concerning a valid transaction.
+/// 当一个交易提交到tx pool时必须带上这些信息, txpool根据这些信息来决定做哪些事情
+/// 不包含inherent, 它是由validators(验证者)放到块中的,通常来自外界很难验证它的正确性
+/// 但是它们需要被其他节点认可
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct ValidTransaction {
 	/// Priority of the transaction.
 	///
 	/// Priority determines the ordering of two transactions that have all
 	/// their dependencies (required tags) satisfied.
+	/// 交易的优先级
+	/// 当一个块被超过编程孤儿块时, 里面的交易会被reorged, 此时这批交易的优先级会提高
 	pub priority: TransactionPriority,
 	/// Transaction dependencies
 	///
 	/// A non-empty list signifies that some other transactions which provide
 	/// given tags are required to be included before that one.
+	/// 依赖的交易列表 可为空
+	/// 依赖的交易需要先执行
 	pub requires: Vec<TransactionTag>,
 	/// Provided tags
 	///
@@ -274,12 +281,14 @@ pub struct ValidTransaction {
 	///
 	/// Longevity describes minimum number of blocks the validity is correct.
 	/// After this period transaction should be removed from the pool or revalidated.
+	/// 交易存活时间, 超过该块后失效被删除
 	pub longevity: TransactionLongevity,
 	/// A flag indicating if the transaction should be propagated to other peers.
 	///
 	/// By setting `false` here the transaction will still be considered for
 	/// including in blocks that are authored on the current node, but will
 	/// never be sent to other peers.
+	/// 是否广播该交易
 	pub propagate: bool,
 }
 
