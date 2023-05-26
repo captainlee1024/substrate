@@ -1384,6 +1384,8 @@ impl<T: Config> Pallet<T> {
 		let parent_hash = <ParentHash<T>>::get();
 		let digest = <Digest<T>>::get();
 
+		// 这里修改 全部反过来
+		// (0..ExtrinsicCount::<T>::take().unwrap_or_default()).rev()
 		let extrinsics = (0..ExtrinsicCount::<T>::take().unwrap_or_default())
 			.map(ExtrinsicData::<T>::take)
 			.collect();
