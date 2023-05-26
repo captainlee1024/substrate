@@ -518,6 +518,9 @@ where
 
 			// execute extrinsics
 			let (header, extrinsics) = block.deconstruct();
+			// 这里也要反转
+			// let reversed = extrinsics.into_iter().rev().collect();
+			// Self::execute_extrinsics_with_book_keeping(reversed, *header.number());
 			// 做完检查后开始执行块里的交易
 			Self::execute_extrinsics_with_book_keeping(extrinsics, *header.number());
 

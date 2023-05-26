@@ -196,6 +196,10 @@ where
 	/// Push onto the block's list of extrinsics.
 	///
 	/// This will ensure the extrinsic can be validly executed (by executing it).
+	/// 这里会执行, 调用 runtime里的apply_extrinsic
+	/// runtime会调用frame中的apply_extrinsic
+	/// 最终依次调用所有pallet中的各种方法
+	/// 我们修改在这里不执行了, 在build_ex..里执行
 	pub fn push(&mut self, xt: <Block as BlockT>::Extrinsic) -> Result<(), Error> {
 		let parent_hash = self.parent_hash;
 		let extrinsics = &mut self.extrinsics;
@@ -228,6 +232,9 @@ where
 	/// Returns the build `Block`, the changes to the storage and an optional `StorageProof`
 	/// supplied by `self.api`, combined as [`BuiltBlock`].
 	/// The storage proof will be `Some(_)` when proof recording was enabled.
+	/// 我们修改  在build的时候按照相反顺序执行
+	/// 但是我们这里按照相反顺序执行了,在check的时候会计算根root, 那个时候是正顺序,
+	/// 所以我们要给他返回来, 去frame/system/src.lib
 	pub fn build(mut self) -> Result<BuiltBlock<Block>, Error> {
 		let header = self.api.finalize_block(self.parent_hash)?;
 
