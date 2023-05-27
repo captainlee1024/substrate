@@ -1225,6 +1225,14 @@ sp_externalities::decl_extension! {
 /// Interface that provides functions to access the offchain functionality.
 ///
 /// These functions are being made available to the runtime and are called by the runtime.
+/// Runtime 运行在它自己的sandbox中, 我们希望在runtime中进行一些状态的读取和写入等一些操作
+/// 这些操作被抽象成接口放在primitives下供Runtime调用
+/// 我们很好的wrap了一层使得Runtime不用在一一些low level的代码我们把它屏蔽起来了通过primitives
+/// 比如 declare storage宏 把需要和数据库交互的细节屏蔽了
+/// IO 是native提供给runtime调用的一组trait
+/// 所以primitives是 runtime's sandbox 和 host之间执行runtime的东西
+///
+/// 比如这里Offchain也提供了一些low level的接口用于http请求
 #[runtime_interface]
 pub trait Offchain {
 	/// Returns if the local node is a potential validator.

@@ -504,6 +504,7 @@ mod tests {
 		t.register_extension(OffchainWorkerExt::new(offchain));
 
 		t.execute_with(|| {
+			// 这里提供了offchain的high level的http接口方法比IO 里low level的好用
 			let request: Request = Request::get("http://localhost:1234");
 			let pending = request.add_header("X-Auth", "hunter2").send().unwrap();
 			// make sure it's sent correctly

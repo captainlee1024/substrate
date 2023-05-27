@@ -202,6 +202,11 @@ where
 }
 
 /// Inform the offchain worker about new imported blocks
+/// offchain worker 和块import 是分开异步运行的, 不影响import block的时间
+/// 就像每个块有一个额外的俩表需要执行,但是它不影响这个块
+/// 如果你想运行一些代码在import block期间, 并且该代码在链下运行, 结果返回到链上
+/// 不会在块执行流程中执行, 与块执行是同步进行的
+/// offchain 对状态的修改不会同步到链, 所以只能读取状态修改不会生效 不会被持久化
 pub async fn notification_future<Client, Block, Spawner>(
 	is_validator: bool,
 	client: Arc<Client>,
