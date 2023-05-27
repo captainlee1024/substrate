@@ -165,8 +165,14 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			// This is a public call, so we ensure that the origin is some signed account.
 			let sender = ensure_signed(origin)?;
+
+			// 如果我们的sender == 我们存储的密钥则继续下面的事情
 			ensure!(Self::key().map_or(false, |k| sender == k), Error::<T>::RequireSudo);
 
+			// 如果sender 和我们存储的key 相同 则使用新的账户 Root 进行调用
+			// 这里我们需要看一个不是frame的frame system 它不是一个frame, 而是frame框架的一部分, 让我们去看一下
+			// Origin 为我们定义(通过trait)告诉Runtime 调用来自哪里
+			// system/lib.rs Origin -> support/dispatch.rs RawOrigin
 			let res = call.dispatch_bypass_filter(frame_system::RawOrigin::Root.into());
 			Self::deposit_event(Event::Sudid { sudo_result: res.map(|_| ()).map_err(|e| e.error) });
 			// Sudo user does not pay a fee.
