@@ -67,15 +67,24 @@ pub trait Callable<T> {
 pub type CallableCallFor<A, R> = <A as Callable<R>>::RuntimeCall;
 
 /// Origin for the System pallet.
+/// Origin 描述了一个交易来自哪里
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub enum RawOrigin<AccountId> {
 	/// The system itself ordained this dispatch to happen: this is the highest privilege level.
+	/// 说明来自链本身的系统模块, sudo 也会使用到这个
 	Root,
 	/// It is signed by some public key and we provide the `AccountId`.
+	/// 说明交易来自外部, 正常的外部交易所带的签名
 	Signed(AccountId),
 	/// It is signed by nobody, can be either:
 	/// * included and agreed upon by the validators anyway,
 	/// * or unsigned transaction validated by a pallet.
+	/// 不知道来源, 像timestamp里的inherent extrinsic那样, 内部生成的添加的一些例如时间戳等的内部交易不签名
+	/// 为什么会被标记为None交易, 因为这个交易需要被验证, 而不是需要一个签名来看是谁发的
+	/// 比如时间戳, 我们需要做的是给出一套校验逻辑去校验它(要比上一个块的时间戳大), 而不是看是谁发的
+	/// 所以, None(eg: inherent extrinsic) 需要定义一些校验逻辑(validation logic)
+	/// 为什么签名交易不需要, 因为如果该交易有什么问题我们知道该惩罚谁, 通过惩戒奖励手段来保证Signed的可靠
+	/// 但是None不知道来源, 所以每个类型的None交易我们都要有确切的validation logic来保证它们不会出问题
 	None,
 }
 

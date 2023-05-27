@@ -447,6 +447,9 @@ pub mod pallet {
 		}
 
 		/// Set the new runtime code without doing any checks of the given `code`.
+		/// 链runtime修复bug或者上新功能的时候可以上传新编译的Runtime wasm的二进制文件
+		/// 大家达成共识后会new runtime wasm bin就可以运行在wasm解释器或者编译器上了
+		/// 如果我们进行本地测试的话我们可以使用sudo强行吧自己的权限升级成Root可以直接强行升级我们的runtime wasm
 		#[pallet::call_index(3)]
 		#[pallet::weight((T::SystemWeightInfo::set_code(), DispatchClass::Operational))]
 		pub fn set_code_without_checks(

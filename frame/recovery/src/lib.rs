@@ -372,6 +372,13 @@ pub mod pallet {
 		/// Parameters:
 		/// - `account`: The recovered account you want to make a call on-behalf-of.
 		/// - `call`: The call you want to make with the recovered account.
+		/// Origin的用法, 有点像sudo? 我们验证一个签名的交易然后将sender转换为指定的账户去调用方法
+		/// 这里是将一个账户转换为另一个账户(比如我的私钥丢失了), 我想用origin 代替 account 来进行 call的调用
+		/// 到链上执行的时候, runtime 开起来真的是account发起的
+		/// 所以发散一下, 我们可以做一个类似的东西, 我们的某个资产是属于组织而不是个人的
+		/// 那么我们就可以为这个组织找一个账户, 但是发送交易的使用是使用成员账户签名, 例如我们收集到2/3成员的多签
+		/// 之后我们验证通过, 然后将Origin转换为组织账户进行调用 all right!
+		/// 有类似思想的pallet: collective membership
 		#[pallet::call_index(0)]
 		#[pallet::weight({
 			let dispatch_info = call.get_dispatch_info();
@@ -384,11 +391,15 @@ pub mod pallet {
 			account: AccountIdLookupOf<T>,
 			call: Box<<T as Config>::RuntimeCall>,
 		) -> DispatchResult {
+			// 检查谁签名了
 			let who = ensure_signed(origin)?;
+			// 查找老账户
 			let account = T::Lookup::lookup(account)?;
 			// Check `who` is allowed to make a call on behalf of `account`
+			// 检查老账户是否已经被who代理了, 只有代理了才能代替老账户进行函数调用
 			let target = Self::proxy(&who).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(target == account, Error::<T>::NotAllowed);
+			// 这里代替调用很简单, 使用旧账户构造一个新的Origin进行后续调用, sudo中也是类似的方式
 			call.dispatch(frame_system::RawOrigin::Signed(account).into())
 				.map(|_| ())
 				.map_err(|e| e.error)
@@ -626,6 +637,9 @@ pub mod pallet {
 		///
 		/// Parameters:
 		/// - `rescuer`: The account trying to rescue this recoverable account.
+		/// 关闭recovery 即将key-valye从proxy(map)中移除
+		/// 在recovery时需要支付一定的押金, 并且会延期预定时间之后执行
+		/// 如果账户被恶意recovery, 你可以recovery, 并且押金会被退到你的账户中去
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::close_recovery(T::MaxFriends::get()))]
 		pub fn close_recovery(
