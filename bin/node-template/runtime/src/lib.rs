@@ -93,6 +93,8 @@ pub mod opaque {
 
 // To learn more about runtime versioning, see:
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
+// 我们升级的时候需要修改一下这里的version然后重新编译Runtime 的wasm文件
+// 然后上传就行了
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("node-template"),

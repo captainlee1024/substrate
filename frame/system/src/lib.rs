@@ -392,11 +392,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		// substrate 链升级是如何设计的
+		// Native Client执行的时候调用 runtime api 的时候判断native的版本和链上wasm版本是否一样
+		// Native Client Environment --entry APIs--> Native runtime is same version as on-chain runtime?
+		// 不一样则执行链上版本通过wasm解释器, 这是新上传的wasm二进制文件, 通过wasmassembly解释器执行
+		// no -> Wasm runtime frome chain(通过WebAssembly interpreter)
+		// 如果是说明没有升级过就执行本地的, 速度块
+		// yes -> Native runtime from client
+		//
+		// 保存新的runtime wasm 文件
 		/// Set the new runtime code.
 		#[pallet::call_index(2)]
 		#[pallet::weight((T::SystemWeightInfo::set_code(), DispatchClass::Operational))]
 		pub fn set_code(origin: OriginFor<T>, code: Vec<u8>) -> DispatchResultWithPostInfo {
+			// 检查交易来源是不是Root
+			// sudo有个实现强行升级成Root
 			ensure_root(origin)?;
+			// 检查版本号, 确认是否能更新
 			Self::can_set_code(&code)?;
 			T::OnSetCode::set_code(code)?;
 			// consume the rest of the block to prevent further transactions
