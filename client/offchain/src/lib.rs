@@ -323,6 +323,52 @@ where
 	}
 }
 
+/// Inform the offchain worker about new imported blocks
+/// offchain worker 和块import 是分开异步运行的, 不影响import block的时间
+/// 就像每个块有一个额外的俩表需要执行,但是它不影响这个块
+/// 如果你想运行一些代码在import block期间, 并且该代码在链下运行, 结果返回到链上
+/// 不会在块执行流程中执行, 与块执行是同步进行的
+/// offchain 对状态的修改不会同步到链, 所以只能读取状态修改不会生效 不会被持久化
+/*
+/// 使用	pub custom_extensions: CE,重构掉了？
+pub async fn notification_future<Client, Block, Spawner>(
+	is_validator: bool,
+	client: Arc<Client>,
+	offchain: Arc<OffchainWorkers<Client, Block>>,
+	spawner: Spawner,
+	network_provider: Arc<dyn NetworkProvider + Send + Sync>,
+) where
+	Block: traits::Block,
+	Client:
+		ProvideRuntimeApi<Block> + sc_client_api::BlockchainEvents<Block> + Send + Sync + 'static,
+	Client::Api: OffchainWorkerApi<Block>,
+	Spawner: SpawnNamed,
+{
+	client
+		.import_notification_stream()
+		.for_each(move |n| {
+			if n.is_new_best {
+				spawner.spawn(
+					"offchain-on-block",
+					Some("offchain-worker"),
+					offchain
+						.on_block_imported(&n.header, network_provider.clone(), is_validator)
+						.boxed(),
+				);
+			} else {
+				tracing::debug!(
+					target: LOG_TARGET,
+					"Skipping offchain workers for non-canon block: {:?}",
+					n.header,
+				)
+			}
+
+			ready(())
+		})
+		.await;
+}
+ */
+
 #[cfg(test)]
 mod tests {
 	use super::*;
