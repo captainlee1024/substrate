@@ -180,6 +180,8 @@ impl WasmtimeInstance {
 				data_segments_snapshot,
 				heap_base,
 			} => {
+				// 获取一个可执行函数 从wasm module 中
+				// 里面是lazyinit 如果找到的不是instance在里面会进行初始化然后存储并返回
 				let entrypoint = instance_wrapper.resolve_entrypoint(method)?;
 
 				data_segments_snapshot.apply(|offset, contents| {
@@ -189,9 +191,13 @@ impl WasmtimeInstance {
 						contents,
 					)
 				})?;
+				// 缓存instance wrapper
 				globals_snapshot.apply(&mut InstanceGlobals { instance: instance_wrapper });
+				// 申请内存
 				let allocator = FreeingBumpHeapAllocator::new(*heap_base);
 
+				// 执行上面拿到的 entrypoint
+				// 传入allocator 执行的结果wasm会直接写到我们host申请的内存里, 我们可以在外面访问到结果
 				let result =
 					perform_call(data, instance_wrapper, entrypoint, allocator, allocation_stats);
 
@@ -566,6 +572,7 @@ where
 	H: HostFunctions,
 {
 	// SAFETY: this is safe because it doesn't use `CodeSupplyMode::Precompiled`.
+	// 进入到该函数
 	unsafe { do_create_runtime::<H>(CodeSupplyMode::Fresh(blob), config) }
 }
 
@@ -633,6 +640,7 @@ where
 {
 	replace_strategy_if_broken(&mut config.semantics.instantiation_strategy);
 
+	// 初始化编译配置
 	let mut wasmtime_config = common_config(&config.semantics)?;
 	if let Some(ref cache_path) = config.cache_path {
 		if let Err(reason) = setup_wasmtime_caching(cache_path, &mut wasmtime_config) {
@@ -643,9 +651,11 @@ where
 		}
 	}
 
+	// 根据配置创建编译用的wasmtime engine
 	let engine = Engine::new(&wasmtime_config)
 		.map_err(|e| WasmError::Other(format!("cannot create the wasmtime engine: {:#}", e)))?;
 
+	// 根据配置编译runtime wasm module
 	let (module, instantiation_strategy) = match code_supply_mode {
 		CodeSupplyMode::Fresh(blob) => {
 			let blob = prepare_blob_for_compilation(blob, &config.semantics)?;
@@ -712,9 +722,17 @@ where
 		},
 	};
 
+	// 初始化编译HostFunction用的linker
 	let mut linker = wasmtime::Linker::new(&engine);
+	// 导入预编译
+	// linker 把所有的function wrap之后就可以实例化了
 	crate::imports::prepare_imports::<H>(&mut linker, &module, config.allow_missing_func_imports)?;
 
+	// 执行使用此链接器实例化所需的所有检查，但实例化 module 实际上并未完成。
+	// 此方法用于预先加载类型检查信息以及收集用于实例化模块的导入。
+	// 返回 InstancePre 的表示一个随时可以实例化的模块，如果需要，也可以多次实例化。
+	// 错误
+	// 返回一个错误，如果模块有任何无法解析的导入，该错误可能会向下转换为 UnknownImportError 。
 	let instance_pre = linker
 		.instantiate_pre(&module)
 		.map_err(|e| WasmError::Other(format!("cannot preinstantiate module: {:#}", e)))?;
@@ -773,6 +791,7 @@ fn perform_call(
 	mut allocator: FreeingBumpHeapAllocator,
 	allocation_stats: &mut Option<AllocationStats>,
 ) -> Result<Vec<u8>> {
+	// 给data申请内存并返回所在内存的地址和长度
 	let (data_ptr, data_len) = inject_input_data(instance_wrapper, &mut allocator, data)?;
 
 	let host_state = HostState::new(allocator);
@@ -780,6 +799,7 @@ fn perform_call(
 	// Set the host state before calling into wasm.
 	instance_wrapper.store_mut().data_mut().host_state = Some(host_state);
 
+	// 开始调用
 	let ret = entrypoint
 		.call(instance_wrapper.store_mut(), data_ptr, data_len)
 		.map(unpack_ptr_and_len);

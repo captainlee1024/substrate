@@ -720,6 +720,7 @@ impl Default for UseDalekExt {
 }
 
 /// Interfaces for working with crypto related types from within the runtime.
+/// 提供给runtime wasm import的Host module 中的Crypto相关函数
 #[runtime_interface]
 pub trait Crypto {
 	/// Returns all `ed25519` public keys for the given key id from the keystore.
@@ -1711,6 +1712,15 @@ pub type SubstrateHostFunctions = (
 	misc::HostFunctions,
 	wasm_tracing::HostFunctions,
 	offchain::HostFunctions,
+	// crypto相关的Host实现
+	// 其中包括两部分, 一部分是纯密码学功能实现
+	// 另一部分是KeyStore提供的和密码学有关的功能比如给一个msg签名之类的
+	// crypto提供了一个接口个并给出了默认实现
+	// 对于第一部分的功能接口则是直接在默认实现内部调用primitives/core 里的密码学实现
+	// 第二部分的功能接口则是在内部默认实现调用了primitives/keystore 里的keystore trait的动态指针
+	// keystore提供了crypto部分功能, 这个dyn keystore在运行时指定
+	// 默认是在client/keystore对primitives/keystore进行了实现, client/keystore实例也会在运行的时候传递到这里
+	// 最总它们一起提供了HostFunction中的Crypto接口的功能供Runtime wasm进行调用
 	crypto::HostFunctions,
 	hashing::HostFunctions,
 	allocator::HostFunctions,
