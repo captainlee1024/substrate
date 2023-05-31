@@ -159,12 +159,20 @@ impl VersionedRuntime {
 /// request.
 ///
 /// The size of cache is configurable via the cli option `--runtime-cache-size`.
+/// 运行时的缓存。
+/// 首次请求实例时，会将其添加到此缓存中。元数据与实例一起保存，以便可以有效地重新初始化它。
+/// 使用 Wasmi 解释器执行方法时，元数据包括可变全局变量的初始内存和值。
+/// 获取运行时的后续请求将内存重置为初始内存的这一个实例返回。因此，每个提取请求都会重复使用一个运行时实例。
+/// 缓存的大小可通过 cli 选项 --runtime-cache-size进行配置
 pub struct RuntimeCache {
 	/// A cache of runtimes along with metadata.
 	///
 	/// Runtimes sorted by recent usage. The most recently used is at the front.
+	/// 运行时缓存以及元数据。
+	/// 按最近使用情况排序的运行时。最近使用的是在前面
 	runtimes: Mutex<LruMap<VersionedRuntimeId, Arc<VersionedRuntime>>>,
 	/// The size of the instances cache for each runtime.
+	/// 每个运行时的实例缓存大小。
 	max_runtime_instances: usize,
 	cache_path: Option<PathBuf>,
 }
@@ -287,6 +295,7 @@ impl RuntimeCache {
 }
 
 /// Create a wasm runtime with the given `code`.
+/// 把runtime 编译成wasm module
 pub fn create_wasm_runtime_with_code<H>(
 	wasm_method: WasmExecutionMethod,
 	heap_alloc_strategy: HeapAllocStrategy,
@@ -299,6 +308,10 @@ where
 {
 	match wasm_method {
 		WasmExecutionMethod::Compiled { instantiation_strategy } =>
+		// 进入到该函数, 根据传入的 WasmtimeRuntime 代码编译生成新代码
+		// 此函数执行从 Wasm 到机器码的转换，这可能在计算上很重。
+		// H泛型参数用于静态传递一组向运行时公开的主机函数。
+		// 在该函数里进行import
 			sc_executor_wasmtime::create_runtime::<H>(
 				blob,
 				sc_executor_wasmtime::Config {

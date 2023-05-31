@@ -62,7 +62,9 @@ impl EntryPoint {
 		let data_ptr = u32::from(data_ptr);
 		let data_len = u32::from(data_len);
 
+		// 判断调用类型
 		match self.call_type {
+			// 直接调用
 			EntryPointType::Direct { ref entrypoint } =>
 				entrypoint.call(&mut *store, (data_ptr, data_len)),
 			EntryPointType::Wrapped { func, ref dispatcher } =>

@@ -37,6 +37,7 @@ pub enum CallContext {
 }
 
 /// Code execution engine.
+/// 代码执行引擎
 pub trait CodeExecutor: Sized + Send + Sync + ReadRuntimeVersion + Clone + 'static {
 	/// Externalities error type.
 	type Error: Display + Debug + Send + Sync + 'static;
@@ -45,6 +46,8 @@ pub trait CodeExecutor: Sized + Send + Sync + ReadRuntimeVersion + Clone + 'stat
 	///
 	/// Returns a tuple of the result (either the output data or an execution error) together with a
 	/// `bool`, which is true if native execution was used.
+	/// 在运行时调用给定的方法。
+	/// 返回结果的元组（输出数据或执行错误）以及 bool，如果使用本机执行，则为 true。
 	fn call(
 		&self,
 		ext: &mut dyn Externalities,
@@ -130,6 +133,7 @@ impl std::fmt::Display for CodeNotFound {
 }
 
 /// A trait that allows reading version information from the binary.
+/// 允许从二进制文件中读取版本信息
 pub trait ReadRuntimeVersion: Send + Sync {
 	/// Reads the runtime version information from the given wasm code.
 	///
