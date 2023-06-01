@@ -79,11 +79,15 @@ where
 			U::pre_dispatch(&self.function)?;
 			(None, None)
 		};
+		// 这里实际调用RuntimeCall的dispatch
+		// 在里面调用RuntimeCall的dispatch_bypass_filter
+		// 然后调用到对应PalletCall的dispatch_bypass_filter
 		let res = self.function.dispatch(RuntimeOrigin::from(maybe_who));
 		let post_info = match res {
 			Ok(info) => info,
 			Err(err) => err.post_info,
 		};
+		// 执行之后做的一些事情, 默认为空
 		Extra::post_dispatch(
 			maybe_pre,
 			info,

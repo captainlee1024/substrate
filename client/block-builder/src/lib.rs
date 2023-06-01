@@ -211,6 +211,13 @@ where
 				api.apply_extrinsic_before_version_6(parent_hash, xt.clone())
 					.map(legacy::byte_sized_error::convert_to_latest)
 			} else {
+				// 这里进行实际的执行, 最终会调如到Runtime 对 api的实现里去
+				// 即调入到
+				// impl sp_block_builder::BlockBuilder<Block> for Runtime {
+				//         fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
+				//             Executive::apply_extrinsic(extrinsic)
+				//         }
+				// }
 				api.apply_extrinsic(parent_hash, xt.clone())
 			};
 

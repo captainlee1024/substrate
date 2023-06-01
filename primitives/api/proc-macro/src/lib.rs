@@ -29,6 +29,7 @@ mod mock_impl_runtime_apis;
 mod runtime_metadata;
 mod utils;
 
+// 对api声明宏里接口的实现
 #[proc_macro]
 pub fn impl_runtime_apis(input: TokenStream) -> TokenStream {
 	impl_runtime_apis::impl_runtime_apis_impl(input)
@@ -39,6 +40,8 @@ pub fn mock_impl_runtime_apis(input: TokenStream) -> TokenStream {
 	mock_impl_runtime_apis::mock_impl_runtime_apis_impl(input)
 }
 
+// 这个是生命runtime api的宏
+// 所有要在runtime 中对外暴露的接口都要使用该宏声明
 #[proc_macro]
 pub fn decl_runtime_apis(input: TokenStream) -> TokenStream {
 	decl_runtime_apis::decl_runtime_apis_impl(input)

@@ -543,6 +543,7 @@ struct ApiRuntimeImplToApiRuntimeApiImpl<'a> {
 impl<'a> ApiRuntimeImplToApiRuntimeApiImpl<'a> {
 	/// Process the given item implementation.
 	fn process(mut self, input: ItemImpl) -> ItemImpl {
+		// 在这里生成
 		let mut input = self.fold_item_impl(input);
 
 		let crate_ = generate_crate_access();
@@ -550,6 +551,7 @@ impl<'a> ApiRuntimeImplToApiRuntimeApiImpl<'a> {
 		// Delete all functions, because all of them are default implemented by
 		// `decl_runtime_apis!`. We only need to implement the `__runtime_api_internal_call_api_at`
 		// function.
+		// 删除所有函数，因为它们都是默认由“decl_runtime_apis！我们只需要实现“__runtime_api_internal_call_api_at”功能
 		input.items.clear();
 		input.items.push(parse_quote! {
 			fn __runtime_api_internal_call_api_at(
@@ -658,6 +660,7 @@ impl<'a> Fold for ApiRuntimeImplToApiRuntimeApiImpl<'a> {
 		where_clause.predicates.push(parse_quote! { &'static RuntimeApiImplCall: Send });
 
 		// Require that all types used in the function signatures are unwind safe.
+		// 要求函数签名中使用的所有类型都是安全的展开。
 		extract_all_signature_types(&input.items).iter().for_each(|i| {
 			where_clause.predicates.push(parse_quote! {
 				#i: std::panic::UnwindSafe + std::panic::RefUnwindSafe
@@ -670,6 +673,13 @@ impl<'a> Fold for ApiRuntimeImplToApiRuntimeApiImpl<'a> {
 
 		input.attrs = filter_cfg_attrs(&input.attrs);
 
+		// The implementation for the `RuntimeApiImpl` is only required when compiling with
+		// the feature `std` or `test`.
+		// “RuntimeApiImpl”的实现仅在使用功能“std”或“test”进行编译时才需要。
+        // 重构掉了
+		// input.attrs.push(parse_quote!( #[cfg(any(feature = "std", test))] ));
+
+		// 在这里实现
 		fold::fold_item_impl(self, input)
 	}
 }
@@ -685,6 +695,7 @@ fn generate_api_impl_for_runtime_api(impls: &[ItemImpl]) -> Result<TokenStream> 
 		// remove the trait to get just the module path
 		runtime_mod_path.segments.pop();
 
+		// 这里进行拓展实现
 		let processed_impl =
 			ApiRuntimeImplToApiRuntimeApiImpl { runtime_block }.process(impl_.clone());
 
@@ -798,17 +809,35 @@ pub fn impl_runtime_apis_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
 	// Parse all impl blocks
 	let RuntimeApiImpls { impls: api_impls } = parse_macro_input!(input as RuntimeApiImpls);
 
+	// 在这里进行实现展开
 	impl_runtime_apis_impl_inner(&api_impls)
 		.unwrap_or_else(|e| e.to_compile_error())
 		.into()
 }
 
 fn impl_runtime_apis_impl_inner(api_impls: &[ItemImpl]) -> Result<TokenStream> {
+	// 对dispatch功能进行实现
 	let dispatch_impl = generate_dispatch_function(api_impls)?;
+	// 对Runtime的实现, 包括一些基本trait(clone,Eq...) 还有所有pallet的Config, 以及api声明宏里的所有的Runtime Api
 	let api_impls_for_runtime = generate_api_impl_for_runtime(api_impls)?;
+
+	// 生成RuntimeApiImpl结构体, 并给RuntimeApiImpl实现一些基本的runtime api
+	// 		pub struct RuntimeApiImpl<Block: #crate_::BlockT, C: #crate_::CallApiAt<Block> + 'static> {
+	// 			call: &'static C,
+	// 			commit_on_success: std::cell::RefCell<bool>,
+	// 			changes: std::cell::RefCell<#crate_::OverlayedChanges>,
+	// 			storage_transaction_cache: std::cell::RefCell<
+	// 				#crate_::StorageTransactionCache<Block, C::StateBackend>
+	// 			>,
+	// 			recorder: std::option::Option<#crate_::ProofRecorder<Block>>,
+	// 		}
+	//		实现了ApiExt, ConstructRuntimeApi和CallApiAt Trait
 	let base_runtime_api = generate_runtime_api_base_structures()?;
 	let runtime_api_versions = generate_runtime_api_versions(api_impls)?;
+	// 生成用于在 wasm 中调用运行时的接口函数。暂时先不看
 	let wasm_interface = generate_wasm_interface(api_impls)?;
+	// 给RuntimeApi生成实现RuntimeApiImpl
+	// 在这里会生成RuntimeApiImpl结构体, 这是给Client用的Runtime apis 的实现
 	let api_impls_for_runtime_api = generate_api_impl_for_runtime_api(api_impls)?;
 
 	#[cfg(feature = "frame-metadata")]

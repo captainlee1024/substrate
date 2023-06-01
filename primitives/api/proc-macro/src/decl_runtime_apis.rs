@@ -266,6 +266,7 @@ fn generate_runtime_decls(decls: &[ItemTrait]) -> Result<TokenStream> {
 			.expect("There should always be at least one version.")
 			.ident;
 
+		// 最终在这里生成
 		result.push(quote!(
 			#[doc(hidden)]
 			#[allow(dead_code)]
@@ -302,6 +303,7 @@ struct ToClientSideDecl<'a> {
 impl<'a> ToClientSideDecl<'a> {
 	/// Process the given [`ItemTrait`].
 	fn process(mut self, decl: ItemTrait) -> ItemTrait {
+		// 在这里进行生成
 		let mut decl = self.fold_item_trait(decl);
 
 		let block_hash = self.block_hash;
@@ -309,6 +311,15 @@ impl<'a> ToClientSideDecl<'a> {
 
 		// Add the special method that will be implemented by the `impl_runtime_apis!` macro
 		// to enable functions to call into the runtime.
+		// 添加将由“impl_runtime_apis！”宏实现的特殊方法，以使函数能够调用运行时。
+		// TODO: 为每个trait方法提供了这个方法, 作用是?
+		// __runtime_api_internal_call_api_at方法会被作为trait给每个 runtime api里的runtime 的trait实现
+		// impl sp_block_builder::BlockBuilder<Block> for Runtime比如BlockBuilder
+		// BlockBuilder有个apply_extrinsic trait
+		// 在basic_authorship里出块执行交易的时候会调用apply_extrinsic_with_context方法
+		// 这个方法是给client用的, 在这个方法里会通过__runtime_api_internal_call_api_at调用到apply_extrinsic
+		// 的实现里去,作为内部和client进行调用的桥梁
+		// 在create_method_decl里面调用了
 		decl.items.push(parse_quote! {
 			/// !!INTERNAL USE ONLY!!
 			#[doc(hidden)]
@@ -334,6 +345,7 @@ impl<'a> ToClientSideDecl<'a> {
 
 		items.into_iter().for_each(|i| match i {
 			TraitItem::Fn(method) => {
+				// 在这里进行生成
 				let fn_decl = self.create_method_decl(method, trait_generics_num);
 				result.push(fn_decl.into());
 			},
@@ -346,6 +358,7 @@ impl<'a> ToClientSideDecl<'a> {
 	/// Takes the method declared by the user and creates the declaration we require for the runtime
 	/// api client side. This method will call by default the `method_runtime_api_impl` for doing
 	/// the actual call into the runtime.
+	/// 采用用户声明的方法，并为运行时 api 客户端创建我们需要的声明。默认情况下，此方法将调用“method_runtime_api_impl”以对运行时进行实际调用
 	fn create_method_decl(
 		&mut self,
 		mut method: TraitItemFn,
@@ -428,11 +441,13 @@ impl<'a> ToClientSideDecl<'a> {
 		let underscores = (0..trait_generics_num).map(|_| quote!(_));
 
 		// Generate the default implementation that calls the `method_runtime_api_impl` method.
+		// 生成调用“method_runtime_api_impl”方法的默认实现。
 		method.default = Some(parse_quote! {
 			{
 				let __runtime_api_impl_params_encoded__ =
 					#crate_::Encode::encode(&( #( &#params ),* ));
 
+				// 在这里调用__runtime_api_internal_call_api_at方法
 				<Self as #trait_name<#( #underscores ),*>>::__runtime_api_internal_call_api_at(
 					self,
 					__runtime_api_at_param__,
@@ -485,7 +500,7 @@ impl<'a> Fold for ToClientSideDecl<'a> {
 		}
 
 		input.items = self.fold_item_trait_items(input.items, input.generics.params.len());
-
+		// 在这里进行生成
 		fold::fold_item_trait(self, input)
 	}
 }
@@ -574,10 +589,12 @@ fn generate_client_side_decls(decls: &[ItemTrait]) -> Result<TokenStream> {
 			errors: &mut errors,
 			trait_: &trait_,
 		}
+			// 在这里进行生成
 		.process(decl);
 
 		let api_version = get_api_version(&found_attributes);
 
+		// 在这里进行实现
 		let runtime_info = api_version.map(|v| generate_runtime_info_impl(&decl, v))?;
 
 		result.push(quote!(
@@ -719,7 +736,11 @@ pub fn decl_runtime_apis_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
 fn decl_runtime_apis_impl_inner(api_decls: &[ItemTrait]) -> Result<TokenStream> {
 	check_trait_decls(api_decls)?;
 
+	// 为Runtime生成特征的声明
 	let runtime_decls = generate_runtime_decls(api_decls)?;
+	// 为client生成特征声明
+	// 这个RuntimeApiImpl对象会对上面生成的进行一层包装,
+	// 给所有方法添加上_with_context后缀, 会调用到上面生成的api的实现里去
 	let client_side_decls = generate_client_side_decls(api_decls)?;
 
 	let decl = quote! {
