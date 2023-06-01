@@ -356,6 +356,7 @@ where
 		});
 
 		for inherent in inherents {
+			// 这里出现了builder.push
 			match block_builder.push(inherent) {
 				Err(ApplyExtrinsicFailed(Validity(e))) if e.exhausted_resources() => {
 					warn!("⚠️  Dropping non-mandatory inherent from overweight block.")
@@ -451,6 +452,7 @@ where
 			}
 
 			trace!("[{:?}] Pushing to the block.", pending_tx_hash);
+			//             // 这里即是打包区块的过程，将交易push进入 builder 过程中，这里的Push和刚才的Push一致
 			match sc_block_builder::BlockBuilder::push(&mut block_builder, pending_tx_data) {
 				Ok(()) => {
 					transaction_pushed = true;

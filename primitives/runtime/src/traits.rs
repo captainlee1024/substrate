@@ -922,6 +922,7 @@ pub trait Header: Clone + Send + Sync + Codec + Eq + MaybeSerialize + Debug + 's
 /// `Extrinsic` pieces of information as well as a `Header`.
 ///
 /// You can get an iterator over each of the `extrinsics` and retrieve the `header`.
+/// 满足基板块抽象概念的东西。它具有“外部”信息的类型以及“标头”。您可以在每个“外函数”上获取一个迭代器并检索“标头”。
 pub trait Block: Clone + Send + Sync + Codec + Eq + MaybeSerialize + Debug + 'static {
 	/// Type for extrinsics.
 	type Extrinsic: Member + Codec + Extrinsic + MaybeSerialize;
@@ -1352,11 +1353,15 @@ impl SignedExtension for () {
 ///
 /// Also provides information on to whom this information is attributable and an index that allows
 /// each piece of attributable information to be disambiguated.
+/// 一条“可执行”信息，由标准基板执行器Executive使用，以便通过编组和调度到命名函数调用来制定一条外部信息。
+/// 还提供有关此信息归属于谁的信息，以及允许消除每条可归属信息的索引。
 pub trait Applyable: Sized + Send + Sync {
 	/// Type by which we can dispatch. Restricts the `UnsignedValidator` type.
+	/// 我们可以发送的类型。限制“UnsignedValidator”类型。
 	type Call: Dispatchable;
 
 	/// Checks to see if this is a valid *transaction*. It returns information on it if so.
+	/// 检查这是否是有效的Tx。如果是这样，它会返回有关它的信息。
 	fn validate<V: ValidateUnsigned<Call = Self::Call>>(
 		&self,
 		source: TransactionSource,

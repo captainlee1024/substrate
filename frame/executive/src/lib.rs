@@ -587,8 +587,18 @@ where
 
 		// Decode parameters and dispatch
 		// 解析参数和function调度器
+		// 这里调用RuntimeCall的get_dispatch_info
+		// 在里面调用到对应palletCall的get_dispatch_info
+		// 然后返回DispatchInfo
+		//                     frame_support::dispatch::DispatchInfo {
+		//                         weight: __pallet_weight,
+		//                         class: __pallet_class,
+		//                         pays_fee: __pallet_pays_fee,
+		//                     }
 		let dispatch_info = xt.get_dispatch_info();
 		// 在调度之前执行所需的所有必要逻辑，并解构为函数调用、索引和发送方
+		// CheckedExtrinsic实现了Applyable trait
+		// 根据dispatch_info执行extenric
 		let r = Applyable::apply::<UnsignedValidator>(xt, &dispatch_info, encoded_len)?;
 
 		// Mandatory(inherents) are not allowed to fail.
