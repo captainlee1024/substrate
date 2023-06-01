@@ -21,6 +21,10 @@
 //! some convenience functionality to store and retrieve these extensions.
 //!
 //! It is required that each extension implements the [`Extension`] trait.
+//!
+//! 外部性扩展存储。
+//! 外部性支持注册各种自定义扩展。提供了 Extensions 一些方便的功能来存储和检索这些扩展。
+//! 每个扩展都需要实现 Extension 该特征
 
 use crate::Error;
 use sp_std::{
@@ -35,6 +39,9 @@ use sp_std::{
 ///
 /// As extensions are stored as `Box<Any>`, this trait should give more confidence that the correct
 /// type is registered and requested.
+///
+/// 应注册为 Externalities 扩展的类型的标记特征。
+/// 由于扩展存储为 Box<Any>，因此此特征应该更有信心注册和请求正确的类型
 pub trait Extension: Send + Any {
 	/// Return the extension as `&mut dyn Any`.
 	///
@@ -114,17 +121,24 @@ macro_rules! decl_extension {
 /// Something that provides access to the [`Extensions`] store.
 ///
 /// This is a super trait of the [`Externalities`](crate::Externalities).
+/// 提供对 [“扩展”] 存储的访问权限的东西。
 pub trait ExtensionStore {
 	/// Tries to find a registered extension by the given `type_id` and returns it as a `&mut dyn
 	/// Any`.
 	///
 	/// It is advised to use [`ExternalitiesExt::extension`](crate::ExternalitiesExt::extension)
 	/// instead of this function to get type system support and automatic type downcasting.
+	///
+	/// 尝试通过给定的“type_id”查找已注册的扩展，并将其作为“&mut dyn Any”返回。建议使用
+	/// ['ExternalitiesExt：：extension']（crate：：ExternalitiesExt：：extension）
+	/// 代替此函数来获取类型系统支持和自动类型向下转换。
 	fn extension_by_type_id(&mut self, type_id: TypeId) -> Option<&mut dyn Any>;
 
 	/// Register extension `extension` with specified `type_id`.
 	///
 	/// It should return error if extension is already registered.
+	/// 使用指定的“type_id”注册扩展 extension。
+	/// 如果扩展已注册，它应该返回错误。
 	fn register_extension_with_type_id(
 		&mut self,
 		type_id: TypeId,
@@ -134,10 +148,12 @@ pub trait ExtensionStore {
 	/// Deregister extension with specified 'type_id' and drop it.
 	///
 	/// It should return error if extension is not registered.
+	/// 使用指定的“type_id”取消注册extension并将其删除。如果未注册扩展，它应该返回错误。
 	fn deregister_extension_by_type_id(&mut self, type_id: TypeId) -> Result<(), Error>;
 }
 
 /// Stores extensions that should be made available through the externalities.
+/// 存储应通过外部性提供的扩展。
 #[derive(Default)]
 pub struct Extensions {
 	extensions: BTreeMap<TypeId, Box<dyn Extension>>,
@@ -152,17 +168,20 @@ impl std::fmt::Debug for Extensions {
 
 impl Extensions {
 	/// Create new instance of `Self`.
+	/// 创建一个自己的instance
 	pub fn new() -> Self {
 		Self::default()
 	}
 
 	/// Register the given extension.
+	/// 注册一个extension
 	pub fn register<E: Extension>(&mut self, ext: E) {
 		let type_id = ext.type_id();
 		self.extensions.insert(type_id, Box::new(ext));
 	}
 
 	/// Register extension `extension` using the given `type_id`.
+	/// 使用给定的“type_id”注册扩展“extension。
 	pub fn register_with_type_id(
 		&mut self,
 		type_id: TypeId,
@@ -178,6 +197,7 @@ impl Extensions {
 	}
 
 	/// Return a mutable reference to the requested extension.
+	/// 返回对请求的扩展的可变引用。
 	pub fn get_mut(&mut self, ext_type_id: TypeId) -> Option<&mut dyn Any> {
 		self.extensions
 			.get_mut(&ext_type_id)
@@ -188,11 +208,13 @@ impl Extensions {
 	/// Deregister extension for the given `type_id`.
 	///
 	/// Returns `true` when the extension was registered.
+	/// 取消注册给定“type_id”的扩展。注册扩展成功时返回“true”。
 	pub fn deregister(&mut self, type_id: TypeId) -> bool {
 		self.extensions.remove(&type_id).is_some()
 	}
 
 	/// Returns a mutable iterator over all extensions.
+	/// 返回所有扩展的可变迭代器
 	pub fn iter_mut(&mut self) -> impl Iterator<Item = (&TypeId, &mut Box<dyn Extension>)> {
 		self.extensions.iter_mut()
 	}

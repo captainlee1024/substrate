@@ -191,16 +191,34 @@ mod execution {
 	}
 
 	/// The substrate state machine.
+	/// stateMachine的执行需要读取数据，以及写入数据，但是对于没有确定的两个块来说我们需要一个临时的内存数据保存，
+	/// 而不是直接写入到磁盘中去，所以StateMachine 需要三个能力:
+	///
+	///  执行区块的能力
+	///
+	/// 访问数据的能力
+	///
+	/// 保存执行后结果的能力
+	///
+	/// backend: 客户端后端。
+	/// 管理数据层。
+	/// 状态修剪
+	/// 当 中的 state_at 对象处于活动状态时，不应修剪该状态。后端应在内部引用计数其状态对象。
+	/// 这同样适用于实时 BlockImportOperations：当基于父级 P 构建的导入操作处于活动状态时，不应修剪 for P 的状态。
+	/// 块修剪
+	/// 用户可以通过调用 pin_block来固定内存中的块。修剪块时，其值将保留在内存缓存中，直到通过 取消 unpin_block固定。
+	/// 固定块时，也会保留其状态。
+	/// 后端应在内部引用计数 pin/取消固定调用数
 	pub struct StateMachine<'a, B, H, Exec>
 	where
 		H: Hasher,
 		B: Backend<H>,
 	{
-		backend: &'a B,
-		exec: &'a Exec,
+		backend: &'a B, // 访问数据的能力
+		exec: &'a Exec, // 执行Block的能力 因为stateMachine要执行区块
 		method: &'a str,
 		call_data: &'a [u8],
-		overlay: &'a mut OverlayedChanges<H>,
+		overlay: &'a mut OverlayedChanges<H>, // 保存执行后的结果, 因为stateMachine要先保存结果等块最终确定再提交
 		extensions: &'a mut Extensions,
 		runtime_code: &'a RuntimeCode<'a>,
 		stats: StateMachineStats,
@@ -269,6 +287,11 @@ mod execution {
 		/// blocks (e.g. a transaction at a time), ensure a different method is used.
 		///
 		/// Returns the SCALE encoded result of the executed function.
+		///
+		/// 使用给定 state Backend、Overlayed 和调用executor。
+		/// 出现错误时，不会将预期的更改写入覆盖层。
+		/// 注意：如果再次进行此调用，将对代码进行更改。对于运行部分区块（例如一次一个交易），请确保使用不同的方法。
+		/// 返回已执行函数的 SCALE 编码结果。
 		pub fn execute(&mut self) -> Result<Vec<u8>, Box<dyn Error>> {
 			self.overlay
 				.enter_runtime()

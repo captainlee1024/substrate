@@ -24,6 +24,10 @@
 //! access the node from the runtime via the runtime interfaces.
 //!
 //! This crate exposes the main [`Externalities`] trait.
+//!
+//! substrate externalities 抽象
+//! 外部性主要提供对存储和注册扩展的访问。例如，扩展是密钥库或链下外部性。这些外部性用于通过运行时接口从运行时访问节点。
+//! 这个板条箱暴露了主要 Externalities 特征
 
 use sp_std::{
 	any::{Any, TypeId},
@@ -79,16 +83,23 @@ impl MultiRemovalResults {
 /// The Substrate externalities.
 ///
 /// Provides access to the storage and to other registered extensions.
+/// 每一个注册的 externalities 模块都叫 Extension
+/// 默认提供了 Store 的 Extension
+/// 用来存储注册的其他 Extension
 pub trait Externalities: ExtensionStore {
 	/// Write a key value pair to the offchain storage database.
+	/// 将键值对写入链下存储数据库。
 	fn set_offchain_storage(&mut self, key: &[u8], value: Option<&[u8]>);
 
 	/// Read runtime storage.
+	/// 专门给runtime使用的
+	/// 读取Runtime的storage
 	fn storage(&self, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Get storage value hash.
 	///
 	/// This may be optimized for large values.
+	/// 获取存储值哈希。这可以针对大值进行优化。
 	fn storage_hash(&self, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Get child storage value hash.
@@ -96,24 +107,30 @@ pub trait Externalities: ExtensionStore {
 	/// This may be optimized for large values.
 	///
 	/// Returns an `Option` that holds the SCALE encoded hash.
+	/// 获取子存储值哈希。这可以针对大值进行优化。返回保存 SCALE 编码哈希的“选项”
 	fn child_storage_hash(&self, child_info: &ChildInfo, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Read child runtime storage.
 	///
 	/// Returns an `Option` that holds the SCALE encoded hash.
+	///
+	/// 读取子运行时存储。返回保存 SCALE 编码哈希的“选项”。
 	fn child_storage(&self, child_info: &ChildInfo, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Set storage entry `key` of current contract being called (effective immediately).
+	/// 设置正在调用的当前合约的存储条目“key”（立即生效）。
 	fn set_storage(&mut self, key: Vec<u8>, value: Vec<u8>) {
 		self.place_storage(key, Some(value));
 	}
 
 	/// Set child storage entry `key` of current contract being called (effective immediately).
+	/// 设置正在调用的当前合约的子存储条目“key”（立即生效）。
 	fn set_child_storage(&mut self, child_info: &ChildInfo, key: Vec<u8>, value: Vec<u8>) {
 		self.place_child_storage(child_info, key, Some(value))
 	}
 
 	/// Clear a storage entry (`key`) of current contract being called (effective immediately).
+	/// 清除正在调用的当前合约的存储条目（“key”）（立即生效）。
 	fn clear_storage(&mut self, key: &[u8]) {
 		self.place_storage(key.to_vec(), None);
 	}
@@ -125,19 +142,24 @@ pub trait Externalities: ExtensionStore {
 	}
 
 	/// Whether a storage entry exists.
+	/// 查询一个key是否存在
 	fn exists_storage(&self, key: &[u8]) -> bool {
 		self.storage(key).is_some()
 	}
 
 	/// Whether a child storage entry exists.
+	/// 查询一个key是否在子存储里
 	fn exists_child_storage(&self, child_info: &ChildInfo, key: &[u8]) -> bool {
 		self.child_storage(child_info, key).is_some()
 	}
 
 	/// Returns the key immediately following the given key, if it exists.
+	/// 返回紧跟在给定键之后的键（如果存在）。
+	/// 类似迭代器
 	fn next_storage_key(&self, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Returns the key immediately following the given key, if it exists, in child storage.
+	/// 类似子存储的迭代器
 	fn next_child_storage_key(&self, child_info: &ChildInfo, key: &[u8]) -> Option<Vec<u8>>;
 
 	/// Clear an entire child storage.
@@ -166,6 +188,7 @@ pub trait Externalities: ExtensionStore {
 	/// Clear storage entries which keys are start with the given prefix.
 	///
 	/// `maybe_limit`, `maybe_cursor` and result works as for `kill_child_storage`.
+	/// 根据前缀匹配进行删除,
 	fn clear_prefix(
 		&mut self,
 		prefix: &[u8],
@@ -186,6 +209,7 @@ pub trait Externalities: ExtensionStore {
 
 	/// Set or clear a storage entry (`key`) of current contract being called (effective
 	/// immediately).
+	/// 设置或删除正在调用的当前合约的存储条目（“key”）（立即生效）。
 	fn place_storage(&mut self, key: Vec<u8>, value: Option<Vec<u8>>);
 
 	/// Set or clear a child storage entry.
@@ -196,6 +220,10 @@ pub trait Externalities: ExtensionStore {
 	/// This will also update all child storage keys in the top-level storage map.
 	///
 	/// The returned hash is defined by the `Block` and is SCALE encoded.
+	///
+	/// 获取当前存储映射的 trie 根。
+	/// 这还将更新顶级存储映射中的所有子存储key。
+	/// 返回的哈希由 Block 和 SCALE 编码定义
 	fn storage_root(&mut self, state_version: StateVersion) -> Vec<u8>;
 
 	/// Get the trie root of a child storage map.
@@ -225,26 +253,40 @@ pub trait Externalities: ExtensionStore {
 	/// automatically.
 	///
 	/// Changes made without any open transaction are committed immediately.
+	///
+	/// 启动新的嵌套事务。这允许提交或回滚在此调用后所做的所有更改到顶部更改或默认子更改。
+	/// 对于每个事务，都有一个匹配的调用“storage_rollback_transaction”
+	/// 或“storage_commit_transaction”。
+	/// 从Runtime返回后仍处于打开状态的任何事务都将自动提交。
+	/// 在没有任何打开事务的情况下所做的更改将立即提交。
 	fn storage_start_transaction(&mut self);
 
 	/// Rollback the last transaction started by `storage_start_transaction`.
 	///
 	/// Any changes made during that storage transaction are discarded. Returns an error when
 	/// no transaction is open that can be closed.
+	///
+	/// 回滚由“storage_start_transaction”启动的最后一个事务。
+	/// 在该存储事务期间所做的任何更改都将被丢弃。当没有打开可以关闭的事务时返回错误
 	fn storage_rollback_transaction(&mut self) -> Result<(), ()>;
 
 	/// Commit the last transaction started by `storage_start_transaction`.
 	///
 	/// Any changes made during that storage transaction are committed. Returns an error when
 	/// no transaction is open that can be closed.
+	///
+	/// 提交由“storage_start_transaction”启动的最后一个事务。
+	/// 将提交在该存储事务期间所做的任何更改。当没有打开可以关闭的事务时返回错误。
 	fn storage_commit_transaction(&mut self) -> Result<(), ()>;
 
 	/// Index specified transaction slice and store it.
+	/// 索引指定的事务切片并存储它。
 	fn storage_index_transaction(&mut self, _index: u32, _hash: &[u8], _size: u32) {
 		unimplemented!("storage_index_transaction");
 	}
 
 	/// Renew existing piece of transaction storage.
+	/// 续订现有的事务存储。
 	fn storage_renew_transaction_index(&mut self, _index: u32, _hash: &[u8]) {
 		unimplemented!("storage_renew_transaction_index");
 	}
@@ -312,22 +354,32 @@ pub trait Externalities: ExtensionStore {
 }
 
 /// Extension for the [`Externalities`] trait.
+/// Externalities 的 Extension
 pub trait ExternalitiesExt {
 	/// Tries to find a registered extension and returns a mutable reference.
+	/// 尝试查找已注册的扩展并返回可变引用。
 	fn extension<T: Any + Extension>(&mut self) -> Option<&mut T>;
 
 	/// Register extension `ext`.
 	///
 	/// Should return error if extension is already registered or extensions are not supported.
+	/// 注册扩展 ext.
+	/// 如果扩展已注册或不支持扩展，则应返回错误。
 	fn register_extension<T: Extension>(&mut self, ext: T) -> Result<(), Error>;
 
 	/// Deregister and drop extension of `T` type.
 	///
 	/// Should return error if extension of type `T` is not registered or
 	/// extensions are not supported.
+	/// 取消注册并删除类型的扩展 T 名。
+	/// 如果未注册类型的 T 扩展名或不支持扩展名，则应返回错误。
 	fn deregister_extension<T: Extension>(&mut self) -> Result<(), Error>;
 }
 
+/// 这些方法的实现实际上调用了ExtensionStore的能力
+/// 因为trait约束了Externalities必须实现ExtensionStore的trait
+/// 也就是这个trait提供了ExtensionStore的能力, 并且包装了一层做了类型转换等
+/// 更方便使用
 impl ExternalitiesExt for &mut dyn Externalities {
 	fn extension<T: Any + Extension>(&mut self) -> Option<&mut T> {
 		self.extension_by_type_id(TypeId::of::<T>()).and_then(<dyn Any>::downcast_mut)

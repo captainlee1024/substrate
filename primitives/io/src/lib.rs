@@ -171,6 +171,8 @@ impl From<MultiRemovalResults> for KillStorageResult {
 #[runtime_interface]
 pub trait Storage {
 	/// Returns the data for `key` in the storage or `None` if the key can not be found.
+	///
+	/// 返回存储中“key”对应的数据，如果找不到key，则返回“None”的数据。
 	fn get(&self, key: &[u8]) -> Option<bytes::Bytes> {
 		self.storage(key).map(|s| bytes::Bytes::from(s.to_vec()))
 	}
