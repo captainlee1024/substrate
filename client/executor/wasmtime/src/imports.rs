@@ -77,6 +77,13 @@ where
 	// 这在内部用于将基于 wasmtime 的执行程序与通过运行时接口宏生成的主机函数定义进行接口，而不是直接使用。
 	let mut registry = Registry { linker, pending_func_imports };
 	// 开始导入import
+	// 在这里面进行注册的
+	// 在这里面会调用io 展开之后生成的register_static函数
+	// 展开的register_static会在里面调用传入的参数的register_static
+	// 即 registry.register_static()
+	// 然后把自己生成的runtime-interface的方法的实现依次注册进去
+	// 这些runtime-interface的实现实际上是对标准Externalities和拓展的Extension的实现的封装
+	// 而Externalities和它的拓展Extension以及runtime-interface的wrap实现都是client端的, 都是std实现的
 	H::register_static(&mut registry)?;
 
 	if !registry.pending_func_imports.is_empty() {

@@ -412,6 +412,9 @@ impl ChildTrieParentKeyId {
 ///
 /// V0 and V1 uses a same trie implementation, but V1 will write external value node in the trie for
 /// value with size at least `TRIE_VALUE_NODE_THRESHOLD`.
+///
+/// 不同的可能状态版本。
+/// V0 和 V1 使用相同的 trie 实现，但 V1 将在 trie 中写入大小至少 TRIE_VALUE_NODE_THRESHOLD为 .
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "std", derive(Encode, Decode))]
 pub enum StateVersion {
