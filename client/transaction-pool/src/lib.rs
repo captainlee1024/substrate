@@ -383,6 +383,8 @@ where
 		spawner: impl SpawnEssentialNamed,
 		client: Arc<Client>,
 	) -> Arc<Self> {
+		// 构建给全节点其他模块使用的txPool API
+		// 在new
 		let pool_api = Arc::new(FullChainApi::new(client.clone(), prometheus, &spawner));
 		let pool = Arc::new(Self::with_revalidation_type(
 			options,

@@ -77,6 +77,8 @@ pub fn new_partial(
 
 	let executor = sc_service::new_native_or_wasm_executor(config);
 	let (client, backend, keystore_container, task_manager) =
+		// 这个Block引用的runtime中定义的Block和impl_runtime_api!宏生成的RuntimeApi
+		// 这个RuntimeApi可以返回宏生成的RuntimeApiImpl, 它实现了定义的所有给client使用的Api
 		sc_service::new_full_parts::<Block, RuntimeApi, _>(
 			config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
@@ -145,7 +147,30 @@ pub fn new_partial(
 }
 
 /// Builds a new service for a full client.
+/// 构建一个全节点Client
 pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
+	// 然后泛型是全称量词，关联类型是存在量词
+	// 这里构建一个全节点需要的组建, 包括
+	// backend 提供数据库
+	// taskmanager substrate所有的函数都作为一个task然后交给taskmanager异步执行
+	// import_queue 提供全节点导入队列(就是从外部接收到的一些块)的接口，该队列在单独的任务中按顺序导入块，具有可插拔验证功能。
+	// keystore_container 密钥存储管理的
+	// transaction_pool 存放所有交易的地方, 存放的交易是一个范型, 该范型在创建的时候会传入一个client
+	// client里面携带了Extrinsic的具体类型,client在创建的时候指定了块的类型
+	// 所以交易池的类型是UncheckedExtrinsic类型的, 是在client初始化时确定的
+	//
+	//
+	// 块的类型引用的是runtime里面的Block
+	// 该文件引入了runtime文件里的一些定义 如下
+	// use node_template_runtime::{self, opaque::Block, RuntimeApi};
+	//  其中Block在runtime中的定义如下
+	// 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+	//	RuntimeApi由impl_runtime_apis!生成
+	//  是一个空结构体, 主要实现了ConstructRuntimeApi接口
+	//	该接口由一个关联类型和一个用来创建RuntimeApiImpl的函数, 关联类型一般是用来指定其他函数的返回值用的
+	//	这里也一样, 用来指定关联类型, 这个关联类型在runtime内部被指定为RuntimeApiImpl
+	//  这个RuntimeApiImpl实现了所有client侧使用的Api也就是impl_runtime_apis!定义的所有API
+
 	let sc_service::PartialComponents {
 		client,
 		backend,
@@ -155,6 +180,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		select_chain,
 		transaction_pool,
 		other: (block_import, grandpa_link, mut telemetry),
+		// Block在这里面初始化client时候指定
 	} = new_partial(&config)?;
 
 	let mut net_config = sc_network::config::FullNetworkConfiguration::new(&config.network);

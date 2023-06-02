@@ -47,6 +47,8 @@ use crate::{
 };
 
 /// The transaction pool logic for full client.
+/// 为全节点定义交易池逻辑
+/// 即提供给client使用的txPool 的 API
 pub struct FullChainApi<Client, Block> {
 	client: Arc<Client>,
 	_marker: PhantomData<Block>,

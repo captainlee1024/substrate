@@ -4738,6 +4738,54 @@ pub mod api {
 				/// 		<frame_system::Pallet<System>>::note_applied_extrinsic(&r, dispatch_info);
 				///
 				/// 		Ok(r.map(|_| ()).map_err(|e| e.error))
+				///
+				/// 这里decode出了UncheckedExtrinsic
+				///
+				/// UncheckedExtrinsic实现了 Encode和Decode
+				///
+				/// 交易被encode发送到链上然后进行decode在执行的时候
+				/// decode出来的UncheckedExtrinsic对象中包含了签名和最终被执行的函数
+				///
+				/// pub struct UncheckedExtrinsic<Address, Call, Signature, Extra>
+				/// where
+				/// 	Extra: SignedExtension,
+				/// {
+				/// 	/// The signature, address, number of extrinsics have come before from
+				/// 	/// the same signer and an era describing the longevity of this transaction,
+				/// 	/// if this is a signed extrinsic.
+				/// 	pub signature: Option<(Address, Signature, Extra)>,
+				/// 	/// The function that should be called.
+				/// 	pub function: Call,
+				/// }
+				///
+				/// pub function:   这里是我们这里指定的RuntimeCall
+				///
+				/// 它可以是RuntimeCall::Template(call)所以会最终进入到template的dispatch
+				///
+				/// 而RuntimeCall::Template(call) 这里的call 可以是Template Call里面的一项
+				/// 其中每一项都是一个Template提供的供外部调用 function 的context的抽象
+				/// 它本身是一种要执行的function的标识用于match, field包含了该function执行所需要的参数
+				///
+				///     pub enum Call<T: Config> {
+				///         #[doc(hidden)]
+				///         #[codec(skip)]
+				///         __Ignore(
+				///             frame_support::sp_std::marker::PhantomData<(T,)>,
+				///             frame_support::Never,
+				///         ),
+				///         /// An example dispatchable that takes a singles value as a parameter, writes the value to
+				///         /// storage and emits an event. This function must be dispatched by a signed extrinsic.
+				///         #[codec(index = 0u8)]
+				///         do_something {
+				///             #[allow(missing_docs)]
+				///             something: u32,
+				///         },
+				///         /// An example dispatchable that may throw a custom error.
+				///         #[codec(index = 1u8)]
+				///         cause_error {},
+				///     }
+				///
+				///
 				let extrinsic: <Block as BlockT>::Extrinsic =
 					match sp_api::DecodeLimit::decode_all_with_depth_limit(
 						sp_api::MAX_EXTRINSIC_DEPTH,
