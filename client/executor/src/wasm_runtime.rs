@@ -247,6 +247,9 @@ impl RuntimeCache {
 		let versioned_runtime_id =
 			VersionedRuntimeId { code_hash: code_hash.clone(), heap_alloc_strategy, wasm_method };
 
+		// 判断一下缓存的runtime instance的version和当前准备执行的runtime code version是否相同
+		// 不相同获取一下最新的runtime code
+		// 实例化并缓存起来  然后执行并返回结果
 		let mut runtimes = self.runtimes.lock(); // this must be released prior to calling f
 		let versioned_runtime = if let Some(versioned_runtime) = runtimes.get(&versioned_runtime_id)
 		{

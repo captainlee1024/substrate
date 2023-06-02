@@ -96,6 +96,20 @@ use {
 type NotificationSinks<T> = Mutex<Vec<TracingUnboundedSender<T>>>;
 
 /// Substrate Client
+/// Client实现了ProvideRuntimeApi用来生成一个runtime中impl_runtime_api!宏生成的RuntimeApiImpl
+/// 的实例
+/// 其中这里的Block是runtime 中定义的Block
+/// RA就是runtime中生成的RuntimeApi该struct实现了ConstructRuntimeApi, 其中的关联类型就是RuntimeApiImpl
+/// pub trait ConstructRuntimeApi<Block: BlockT, C: CallApiAt<Block>> {
+/// 	/// The actual runtime api that will be constructed.
+/// 	type RuntimeApi: ApiExt<Block>;
+/// 
+/// 	/// Construct an instance of the runtime api.
+/// 	fn construct_runtime_api(call: &C) -> ApiRef<Self::RuntimeApi>;
+/// }
+/// 
+/// 在ProvideRuntimeApi是对该trait的包装也有一个关联类型和一个构造RuntimeApiImpl的函数
+/// 其关联类型指定为ConstructRuntimeApi的关联类型
 pub struct Client<B, E, Block, RA>
 where
 	Block: BlockT,

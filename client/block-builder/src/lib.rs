@@ -154,6 +154,16 @@ where
 	/// While proof recording is enabled, all accessed trie nodes are saved.
 	/// These recorded trie nodes can be used by a third party to prove the
 	/// output of this block builder without having access to the full storage.
+	/// 基于给定的“parent_hash”和“parent_number”创建一个新的构建器实例。启用校样记录时，将保存所有访问的trie节点。
+	/// 第三方可以使用这些记录的trie节点来证明此块构建器的输出，而无需访问完整的存储
+	///
+	/// 在初始化一个块的时候使用了Runtime中impl_runtime_api!下的一些函数
+	/// 包括record_proof, initialize_block_with_context, api_version等函数
+	/// 	A: ProvideRuntimeApi<Block> + 'a, 在实现BlockBuilder时约束的A的类型
+	/// 而这个trait就是用来创建实现了impl_runtime_api这些功能(RuntimeApiImpl)的实例
+	/// 而client/service/Client实现了该trait
+	/// 在client/service/Client中实现了BlockBuilderProvider, 实现中调用该方法
+	/// 在该方法中使用了传入的Client创建出RuntimeApiImpl
 	pub fn new(
 		api: &'a A,
 		parent_hash: Block::Hash,
