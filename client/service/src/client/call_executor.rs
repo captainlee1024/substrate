@@ -169,6 +169,16 @@ where
 		let mut changes = OverlayedChanges::default();
 		let at_number =
 			self.backend.blockchain().expect_block_number_from_id(&BlockId::Hash(at_hash))?;
+		// 	type State = RecordStatsState<RefTrackingState<Block>, Block>;
+		//  它在Backend里指定为了该类型, 它的关联类型约束如下
+		//	/// Associated state backend type.
+		// 	type State: StateBackend<HashFor<Block>>
+		// 		+ Send
+		// 		+ AsTrieBackend<
+		// 			HashFor<Block>,
+		// 			TrieBackendStorage = <Self::State as StateBackend<HashFor<Block>>>::TrieBackendStorage,
+		// 		>;
+		// sc_db::record_stats_state::RecordStatsState
 		let state = self.backend.state_at(at_hash)?;
 
 		let state_runtime_code = sp_state_machine::backend::BackendRuntimeCode::new(&state);

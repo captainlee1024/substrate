@@ -60,6 +60,7 @@ pub use trie_stream::TrieStream;
 pub struct LayoutV0<H>(PhantomData<H>);
 
 /// substrate trie layout, with external value nodes.
+/// substrate trie layout，具有外部价值节点。
 pub struct LayoutV1<H>(PhantomData<H>);
 
 impl<H> TrieLayout for LayoutV0<H>
@@ -288,6 +289,15 @@ pub fn read_trie_value<L: TrieLayout, DB: hash_db::HashDBRef<L::Hash, trie_db::D
 	recorder: Option<&mut dyn TrieRecorder<TrieHash<L>>>,
 	cache: Option<&mut dyn TrieCache<L::Codec>>,
 ) -> Result<Option<Vec<u8>>, Box<TrieError<L>>> {
+	// 根据传入的DB root cache recorder构建一个TrieDB
+	/*
+		TrieDB {
+			db: self.db,
+			root: self.root,
+			cache: self.cache.map(core::cell::RefCell::new),
+			recorder: self.recorder.map(core::cell::RefCell::new),
+		}
+	 */
 	TrieDBBuilder::<L>::new(db, root)
 		.with_optional_cache(cache)
 		.with_optional_recorder(recorder)

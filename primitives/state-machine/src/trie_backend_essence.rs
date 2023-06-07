@@ -17,6 +17,7 @@
 
 //! Trie-based state machine backend essence used to read values
 //! from storage.
+//! 基于 Trie 的状态机后端本质，用于从存储中读取值。
 
 use crate::{
 	backend::{IterArgs, StorageIterator},
@@ -57,12 +58,15 @@ macro_rules! format {
 type Result<V> = sp_std::result::Result<V, crate::DefaultError>;
 
 /// Patricia trie-based storage trait.
+/// 基于 Patricia trie 的存储trait
 pub trait Storage<H: Hasher>: Send + Sync {
 	/// Get a trie node.
+	/// 获取一个 trie 节点。
 	fn get(&self, key: &H::Out, prefix: Prefix) -> Result<Option<DBValue>>;
 }
 
 /// Local cache for child root.
+/// child root 的本地缓存
 #[cfg(feature = "std")]
 pub(crate) struct Cache<H> {
 	pub child_root: HashMap<Vec<u8>, Option<H>>,
@@ -203,14 +207,64 @@ where
 }
 
 /// Patricia trie-based pairs storage essence.
+/// 基于 Patricia trie 的存储底层实现
+/// state-machine 的实现最终委托给了trieBackendEssence这里
+/// TrieBackendEssence如何从世界状态中读取数据呢, 比如Storage(key) -> value接口?
+/// 实际上TrieBackendEssence持有了Client的Backend的storage, 使用该storage构建了HashDB(只有查询接口,不允许修改,修改应该在Overlay里)
+/// 然后根据构建的HashDB, Cache, Record 构建出一个TrieDB进行查询
 pub struct TrieBackendEssence<S: TrieBackendStorage<H>, H: Hasher, C> {
+	/*
+    	pub type DbState<B> =
+    	sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+    	在RefTrackingState里指定了S的类型为dyn sp_state_machine::Storage
+    	这个trait实现了TrieBackendStorage
+ 	*/
+	// TrieBackend的S被指定为byn sp_state_machine::Storage
+	// 同理, 这里也被指定为byn sp_state_machine::Storage
+	// 而RefTrackingState的storage字段实现了sp_state_machine::Storage
+	// trie backend essence 使用的键值对存储。
+
+	// 这里的storage是在调用Client的Backend的state_at的时候创建的
+	// 实际上就是Backend的storage, 这也是为什么state-machine的Backend的实现最终都委托到了这里的原因
+	//
+	// storage: Arc<StorageDb<Block>>,
+	/*
+		struct StorageDb<Block: BlockT> {
+			pub db: Arc<dyn Database<DbHash>>,
+			pub state_db: StateDb<Block::Hash, Vec<u8>, StateMetaDb>,
+			prefix_keys: bool,
+		}
+
+		/// State DB maintenance. See module description.
+		/// Can be shared across threads.
+		/// 状态数据库维护。请参阅模块说明。可以跨线程共享。
+		pub struct StateDb<BlockHash: Hash, Key: Hash, D: MetaDb> {
+			db: RwLock<StateDbSync<BlockHash, Key, D>>,
+		}
+	 */
 	storage: S,
+	// 根hash
 	root: H::Out,
 	empty: H::Out,
 	#[cfg(feature = "std")]
+	// 用来缓存child root
 	pub(crate) cache: Arc<RwLock<Cache<H::Out>>>,
 	pub(crate) trie_node_cache: Option<C>,
 	#[cfg(feature = "std")]
+	// trie record
+	// 它可以用来记录对trie的访问, 然后将它们转换为['StorageProof']
+	// struct RecorderInner<H> {
+	// 	/// The keys for that we have recorded the trie nodes and if we have recorded up to the value.
+	// 	/// Mapping: `StorageRoot -> (Key -> RecordedForKey)`.
+	// 	recorded_keys: HashMap<H, HashMap<Arc<[u8]>, RecordedForKey>>,
+	//
+	// 	/// Currently active transactions.
+	// 	transactions: Vec<Transaction<H>>,
+	//
+	// 	/// The encoded nodes we accessed while recording.
+	// 	/// Mapping: `Hash(Node) -> Node`.
+	// 	accessed_nodes: HashMap<H, Vec<u8>>,
+	// }
 	pub(crate) recorder: Option<Recorder<H>>,
 }
 
@@ -292,6 +346,9 @@ impl<S: TrieBackendStorage<H>, H: Hasher, C: TrieCacheProvider<H>> TrieBackendEs
 	/// Call the given closure passing it the recorder and the cache.
 	///
 	/// If the given `storage_root` is `None`, `self.root` will be used.
+	///
+	/// 调用给定的闭包，将其传递给记录器和缓存。如果给定的“storage_root”是“None”，则将使用“self.root”
+	// #[cfg(feature = "std")]
 	#[inline]
 	fn with_recorder_and_cache<R>(
 		&self,
@@ -301,12 +358,22 @@ impl<S: TrieBackendStorage<H>, H: Hasher, C: TrieCacheProvider<H>> TrieBackendEs
 			Option<&mut dyn TrieCache<NodeCodec<H>>>,
 		) -> R,
 	) -> R {
+		// 获取storage_root
 		let storage_root = storage_root.unwrap_or_else(|| self.root);
+        		// 返回一个['sp_trie::LocalTrieCache']
+		// 将 self 作为 ['TrieDB']（trie_db：：TrieDB） 兼容缓存返回。给定的“storage_root”需要是此缓存用于的 trie 的存储根
+		//
+		// LocalTrieCache: 本地 trie 缓存。
+		// 此缓存应按后端创建的每个state instance使用。一个state instance 引用一个块的 state
+		// 它将缓存对状态所做的所有访问，这些访问无法由  SharedTrieCache 填充, 删除此实例时，这些本地缓存的项将合并回共享 trie 缓存。
+		// 使用 Self::as_trie_db_cache 或 Self::as_trie_db_mut_cache时，它将锁定互斥体。因此，重要的是不要多次调用这些方法，因为它们否则会死锁。
+
 		let mut cache = self.trie_node_cache.as_ref().map(|c| c.as_trie_db_cache(storage_root));
 		let cache = cache.as_mut().map(|c| c as _);
 
 		#[cfg(feature = "std")]
 		{
+            		// 获取自身的recorder
 			let mut recorder = self.recorder.as_ref().map(|r| r.as_trie_recorder(storage_root));
 			let recorder = match recorder.as_mut() {
 				Some(recorder) => Some(recorder as &mut dyn TrieRecorder<H::Out>),
@@ -393,6 +460,8 @@ where
 {
 	/// Calls the given closure with a [`TrieDb`] constructed for the given
 	/// storage root and (optionally) child trie.
+	/// 使用 ['TrieDb'] 调用给定的闭包
+	/// 为给定的存储根和可选的子 trie 构造
 	#[inline]
 	fn with_trie_db<R>(
 		&self,
@@ -521,7 +590,9 @@ where
 	pub fn storage(&self, key: &[u8]) -> Result<Option<StorageValue>> {
 		let map_e = |e| format!("Trie lookup error: {}", e);
 
+		// 这里
 		self.with_recorder_and_cache(None, |recorder, cache| {
+			// 这里本身是一个hashDB
 			read_trie_value::<Layout<H>, _>(self, &self.root, key, recorder, cache).map_err(map_e)
 		})
 	}
@@ -768,6 +839,7 @@ impl<'a, S: 'a + TrieBackendStorage<H>, H: Hasher> HashDBRef<H, DBValue> for Eph
 }
 
 /// Key-value pairs storage that is used by trie backend essence.
+/// trie backend essence 使用的键值对存储。
 pub trait TrieBackendStorage<H: Hasher>: Send + Sync {
 	/// Get the value stored at key.
 	fn get(&self, key: &H::Out, prefix: Prefix) -> Result<Option<DBValue>>;
@@ -808,6 +880,7 @@ impl<S: TrieBackendStorage<H>, H: Hasher, C: TrieCacheProvider<H> + Send + Sync>
 	}
 }
 
+// 实现了HashDB， 实际上是对storage的一层包装实现
 impl<S: TrieBackendStorage<H>, H: Hasher, C: TrieCacheProvider<H> + Send + Sync> HashDB<H, DBValue>
 	for TrieBackendEssence<S, H, C>
 {

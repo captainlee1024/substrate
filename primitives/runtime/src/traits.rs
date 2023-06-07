@@ -1244,7 +1244,11 @@ pub trait HeaderProvider {
 /// `Extrinsic` pieces of information as well as a `Header`.
 ///
 /// You can get an iterator over each of the `extrinsics` and retrieve the `header`.
-/// 满足基板块抽象概念的东西。它具有“外部”信息的类型以及“标头”。您可以在每个“外函数”上获取一个迭代器并检索“标头”。
+/// 满足substrate block抽象概念的东西。它具有“Extrinsic”信息的类型以及“header”。您可以在每个“extrinsics”上获取一个迭代器并检索“header”。
+/// 这个Block trait被generic Block实现了
+/// generic Block在Runtime里指定了类型
+/// 该类型就是apply_extrinsic_with_context使用的参数类型
+/// 也是交易池里的交易类型
 pub trait Block:
 	HeaderProvider<HeaderT = <Self as Block>::Header>
 	+ Clone

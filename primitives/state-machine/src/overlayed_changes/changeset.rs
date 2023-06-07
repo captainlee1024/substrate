@@ -35,7 +35,12 @@ const PROOF_OVERLAY_NON_EMPTY: &str = "\
 	An OverlayValue is always created with at least one transaction and dropped as soon
 	as the last transaction is removed; qed";
 
+// DirtyKeySets是一个5层的slice
+// 并且每一次是一个HashSet用于记录该层记录过的key，对于一个key，insert时，第一次返回true，后续返回false
+// TODO: 为什么是5层，大胆猜测一下可能是transaction只允许嵌套5层，或者通常情况不超过5层所以会不会扩容到堆上
 type DirtyKeysSets<K> = SmallVec<[Set<K>; 5]>;
+// Transactions和DirtyKeySets对应为5层，因为当同一个数据被第二次写入的时候
+// 会在第二层开始写，不能直接覆盖，但是当我们进行
 type Transactions<V> = SmallVec<[InnerValue<V>; 5]>;
 
 /// Error returned when trying to commit or rollback while no transaction is open or
@@ -97,10 +102,13 @@ pub type OverlayedChangeSet = OverlayedMap<StorageKey, Option<StorageValue>>;
 #[derive(Debug, Clone)]
 pub struct OverlayedMap<K, V> {
 	/// Stores the changes that this overlay constitutes.
+	///
 	changes: BTreeMap<K, OverlayedEntry<V>>,
 	/// Stores which keys are dirty per transaction. Needed in order to determine which
 	/// values to merge into the parent transaction on commit. The length of this vector
 	/// therefore determines how many nested transactions are currently open (depth).
+	/// 一个5层的HashSet用来记录
+	/// 每启动一个transaction就会新起一层用来记录新transaction的dirty_keys
 	dirty_keys: DirtyKeysSets<K>,
 	/// The number of how many transactions beginning from the first transactions are started
 	/// by the client. Those transactions are protected against close (commit, rollback)
@@ -193,12 +201,18 @@ impl<V> OverlayedEntry<V> {
 	/// rolled back when required.
 	fn set(&mut self, value: V, first_write_in_tx: bool, at_extrinsic: Option<u32>) {
 		if first_write_in_tx || self.transactions.is_empty() {
+			// 如果是第一次写入
+			// 或者transaction为空(TODO: 为空不是意识第一次写入吗, 或者之前写入过一次, 写的就是空?)
 			self.transactions.push(InnerValue { value, extrinsics: Default::default() });
 		} else {
+			// 如果不是第一次写入就构造一层新的InnerValue来存储当前的值
+			// TODO: 为什么不是新构造一层, 而是使用最新的
+			// 以transaction为单位, 一层transaction内可以覆盖
 			*self.value_mut() = value;
 		}
 
 		if let Some(extrinsic) = at_extrinsic {
+			// 同样地, extrinsic也保存一份
 			self.transaction_extrinsics_mut().insert(extrinsic);
 		}
 	}
@@ -216,6 +230,7 @@ impl OverlayedEntry<Option<StorageValue>> {
 /// Returns true iff we are currently have at least one open transaction and if this
 /// is the first write to the given key that transaction.
 fn insert_dirty<K: Ord + Hash>(set: &mut DirtyKeysSets<K>, key: K) -> bool {
+	// 获取最新的一层, 返回指向最新的一层的set的可变指针
 	set.last_mut().map(|dk| dk.insert(key)).unwrap_or_default()
 }
 
@@ -251,7 +266,37 @@ impl<K: Ord + Hash + Clone, V> OverlayedMap<K, V> {
 	/// Set a new value for the specified key.
 	///
 	/// Can be rolled back or committed when called inside a transaction.
+	///
+	/// 			// 注意, 这里的transaction是每一笔交易都会开启一个, 所以transaction是针对一笔Extrinsic的, 所以这里才会在一层transaction里进行覆盖操作
+	/// 			// 多个transaction里才会启用新的一层来保存修改历史
+	/// 			// 在这里先启动一个transaction
+	/// 			// 在execute_aux里会将top level的transaction交给runtime管理, runtime有权rollback
+	/// 			// 但是其他的runtime无权rollback
+	/// 			// 然后根据overlay和当前的transaction cache以及backend构造ext然后开始执行
+	/// 			// 最后返回在下面commit或者rollback
 	pub fn set(&mut self, key: K, value: V, at_extrinsic: Option<u32>) {
+		// kv写入changes里, changes是一个BTreeMap
+		// changes: BTreeMap<K, OverlayedEntry<V>>,
+		// 从BTreeMap中查找该key的条目, 如果找到就修改, 没找到就插入
+		// 然后记录一下这个key到dirty_keys
+		// 如果dirty_keys在insert该key的时候返回true说明是新值, 是插入, 否则是修改
+		// 但是修改不能直接在entry上进行覆盖, 所以BTreeMap的value是具有分层结构的
+		// 这里entry返回Value是OverlayedEntry, 是一个分层结构, 结构如下
+		// pub struct OverlayedEntry<V> {
+		// 	/// The individual versions of that value.
+		// 	/// One entry per transactions during that the value was actually written.
+		// 	transactions: Transactions<V>,
+		// }
+		// 每一次修改Overlay里的同个key对应的值都是会记录一个新的InnerValue<V>在最上层
+		// InnerValue记录了该次修改的Value和Extrinsics的索引
+		// type Transactions<V> = SmallVec<[InnerValue<V>; 5]>;
+		// InnerValue
+		// struct InnerValue<V> {
+		// 	/// Current value. None if value has been deleted.
+		// 	value: V,
+		// 	/// The set of extrinsic indices where the values has been changed.
+		// 	extrinsic: Extrinsic,
+		// }
 		let overlayed = self.changes.entry(key.clone()).or_default();
 		overlayed.set(value, insert_dirty(&mut self.dirty_keys, key), at_extrinsic);
 	}
@@ -325,6 +370,11 @@ impl<K: Ord + Hash + Clone, V> OverlayedMap<K, V> {
 	/// or `rollback_transaction` before this overlay can be converted into storage changes.
 	///
 	/// Changes made without any open transaction are committed immediately.
+	///
+	/// 启动新的嵌套事务。这允许提交或回滚在此事务打开时所做的所有更改。
+	/// 任何事务都必须通过“commit_transaction”或“rollback_transaction”关闭，然后才能将此覆盖转换为存储更改。在没有任何打开事务的情况下所做的更改将立即提交。
+	///
+	/// 可见并不是对每一个交易的执行结果进行缓存
 	pub fn start_transaction(&mut self) {
 		self.dirty_keys.push(Default::default());
 	}
@@ -347,13 +397,16 @@ impl<K: Ord + Hash + Clone, V> OverlayedMap<K, V> {
 
 	fn close_transaction(&mut self, rollback: bool) -> Result<(), NoOpenTransaction> {
 		// runtime is not allowed to close transactions started by the client
+		// 不允许运行时关闭客户端启动的事务
 		if let ExecutionMode::Runtime = self.execution_mode {
 			if !self.has_open_runtime_transactions() {
 				return Err(NoOpenTransaction)
 			}
 		}
 
+		// 依次弹出dirty_keys里面的key
 		for key in self.dirty_keys.pop().ok_or(NoOpenTransaction)? {
+			// 查看对于同一个值是否有多个tx写入过
 			let overlayed = self.changes.get_mut(&key).expect(
 				"\
 				A write to an OverlayedValue is recorded in the dirty key set. Before an
@@ -362,30 +415,58 @@ impl<K: Ord + Hash + Clone, V> OverlayedMap<K, V> {
 			",
 			);
 
+			// 如果是rollback
 			if rollback {
+				// 如果这里不是提交而是rollback
+				// 就直接弹出最顶层的trasaction的状态写入集合
+				// 这个最顶层的transaction就是在当前transaction提交的该key的InnerValue, 直接pop就可以了
 				overlayed.pop_transaction();
 
 				// We need to remove the key as an `OverlayValue` with no transactions
 				// violates its invariant of always having at least one transaction.
+				// 我们需要删除key作为没有事务的“OverlayValue”，这违反了其始终至少有一个事务的不变性。
+				// 即删除之后如果一层transaction都没有了那么
+				// 这个key会被删除从change set里
+				//
+				// 如果pop之后transaction是空的, 说明就一个transaction, 已经被rollback了
+				// 说明之前在changes里不存在该OverlayEntry, 需要从里面彻底删除
 				if overlayed.transactions.is_empty() {
 					self.changes.remove(&key);
 				}
 			} else {
+				// 如果是commit
+
+				// 如果之前修改过了
 				let has_predecessor = if let Some(dirty_keys) = self.dirty_keys.last_mut() {
 					// Not the last tx: Did the previous tx write to this key?
+					// 不是最后一个 tx：以前的 tx 是否写入了此key
+					// 获取top level的dirty set, insert失败表示之前已经写入过了, 返回true
 					!dirty_keys.insert(key)
 				} else {
 					// Last tx: Is there already a value in the committed set?
 					// Check against one rather than empty because the current tx is still
 					// in the list as it is popped later in this function.
+					// 最后一个 tx：提交的集合中是否已经有值？
+					// 检查一个而不是空，因为当前 tx 仍在列表中，因为它稍后会在此函数中弹出。
+					// 如果不大于1, 说明只有一层, 不需要覆盖
 					overlayed.transactions.len() > 1
 				};
 
 				// We only need to merge if there is an pre-existing value. It may be a value from
 				// the previous transaction or a value committed without any open transaction.
+				// 我们只需要在存在预先存在的值时才需要合并(即，之前有tx对相同的key做了写入，我们需要合并它)
+				// 它可以是来自上一个事务的值，也可以是没有任何打开事务的情况下提交的值
 				if has_predecessor {
+					// 合并top level的值到second level
+					// 如果之前写入过该值，就弹出top level
+					// 然后将值赋予最新的top level
+					//
+					//
+					// 将最新一层的 transaction弹出, 然后将在此处的修改覆盖到上一层
 					let dropped_tx = overlayed.pop_transaction();
+					// 弹出之后最last_mut就是上一层, 直接给它赋值就行
 					*overlayed.value_mut() = dropped_tx.value;
+					// 同理, 修改该key的extrinsic也会使用上一层的覆盖掉
 					overlayed.transaction_extrinsics_mut().extend(dropped_tx.extrinsics);
 				}
 			}

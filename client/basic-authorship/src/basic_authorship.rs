@@ -327,6 +327,26 @@ where
 	C::Api: ApiExt<Block> + BlockBuilderApi<Block>,
 	PR: ProofRecording,
 {
+	/// 在basic_authorship propose_with进行出块的时候
+	/// 我们会先创建一个RuntimeApiImpl实例和一个BlockBuilder进行绑定, 此时初始化RuntimeApiImpl中的Overlay和Recorder
+	/// 用来缓存当前块的读写集
+	/// 当所有的交易执行完毕之后
+	/// BlockBuilder会进行build 最终打包出一个块
+	/// 这个时候会进行当前块的读写集缓存和前一个块状态下对应的世界状态进行合并
+	///
+	/// 1. 计算header header = self
+	/// 			.api
+	/// 			.finalize_block_with_context(self.parent_hash, ExecutionContext::BlockConstruction)?;
+	/// 2. api记录的有recorder所以可以计算出 storageProof proof = self.api.extract_proof();
+	///
+	/// 3. BlockBuilder 持有Backend 所以可以获取到上一个块下的世界状态 state = self.backend.state_at(self.parent_hash)?;
+	///
+	/// 4. 有了上一个块下的世界状态, 前置区块hash, Api保存了当前块的OverlayChanges 所以可以合并得到当前块的世界状态树
+	/// storage_changes = self
+	/// 			.api
+	/// 			.into_storage_changes(&state, self.parent_hash)
+	/// 			.map_err(sp_blockchain::Error::StorageChanges)?;
+	/// 最终runtimeApiImpl是调用state-machine/overlayed_changes里提供的into_storage_changes方法
 	async fn propose_with(
 		self,
 		inherent_data: InherentData,

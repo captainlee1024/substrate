@@ -91,6 +91,10 @@ impl<B: error::Error, E: error::Error> error::Error for Error<B, E> {
 }
 
 /// Wraps a read-only backend, call executor, and current overlayed changes.
+/// 实现了Externalities, 提供了Externalities里所有的storage方法, native和wasm执行访问storage都是通过这里的方法
+/// 也就是说substrate中把访问storage的事情都托管给了Externalities
+///
+/// 实现了Extensions接口用于拓展当前的externalities
 pub struct Ext<'a, H, B>
 where
 	H: Hasher,
@@ -167,6 +171,8 @@ where
 		self.overlay.set_offchain_storage(key, value)
 	}
 
+	// 首先读取当前块的overlay, 即当前块的修改集合(写集)
+	// 如果没有则从数据库读取
 	fn storage(&self, key: &[u8]) -> Option<StorageValue> {
 		let _guard = guard();
 		let result = self

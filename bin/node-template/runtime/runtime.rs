@@ -77,408 +77,47 @@ pub mod opaque {
 		pub grandpa: <Grandpa as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
 	}
 	#[automatically_derived]
-	impl ::core::clone::Clone for SessionKeys {
-		#[inline]
-		fn clone(&self) -> SessionKeys {
-			SessionKeys {
-				aura: ::core::clone::Clone::clone(&self.aura),
-				grandpa: ::core::clone::Clone::clone(&self.grandpa),
-			}
-		}
-	}
+	impl ::core::clone::Clone for SessionKeys {}
 	#[automatically_derived]
 	impl ::core::marker::StructuralPartialEq for SessionKeys {}
 	#[automatically_derived]
-	impl ::core::cmp::PartialEq for SessionKeys {
-		#[inline]
-		fn eq(&self, other: &SessionKeys) -> bool {
-			self.aura == other.aura && self.grandpa == other.grandpa
-		}
-	}
+	impl ::core::cmp::PartialEq for SessionKeys {}
 	#[automatically_derived]
 	impl ::core::marker::StructuralEq for SessionKeys {}
 	#[automatically_derived]
-	impl ::core::cmp::Eq for SessionKeys {
-		#[inline]
-		#[doc(hidden)]
-		#[no_coverage]
-		fn assert_receiver_is_total_eq(&self) -> () {
-			let _: ::core::cmp::AssertParamIsEq<
-				<Aura as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-			>;
-			let _: ::core::cmp::AssertParamIsEq<
-				<Grandpa as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-			>;
-		}
-	}
+	impl ::core::cmp::Eq for SessionKeys {}
 	#[allow(deprecated)]
 	const _: () = {
 		#[automatically_derived]
-		impl ::codec::Encode for SessionKeys {
-			fn encode_to<__CodecOutputEdqy: ::codec::Output + ?::core::marker::Sized>(
-				&self,
-				__codec_dest_edqy: &mut __CodecOutputEdqy,
-			) {
-				::codec::Encode::encode_to(&self.aura, __codec_dest_edqy);
-				::codec::Encode::encode_to(&self.grandpa, __codec_dest_edqy);
-			}
-		}
+		impl ::codec::Encode for SessionKeys {}
 		#[automatically_derived]
 		impl ::codec::EncodeLike for SessionKeys {}
 	};
 	#[allow(deprecated)]
 	const _: () = {
 		#[automatically_derived]
-		impl ::codec::Decode for SessionKeys {
-			fn decode<__CodecInputEdqy: ::codec::Input>(
-				__codec_input_edqy: &mut __CodecInputEdqy,
-			) -> ::core::result::Result<Self, ::codec::Error> {
-				::core::result::Result::Ok(SessionKeys {
-					aura: {
-						let __codec_res_edqy = < < Aura as :: sp_runtime :: BoundToRuntimeAppPublic > :: Public as :: codec :: Decode > :: decode (__codec_input_edqy) ;
-						match __codec_res_edqy {
-							::core::result::Result::Err(e) =>
-								return ::core::result::Result::Err(
-									e.chain("Could not decode `SessionKeys::aura`"),
-								),
-							::core::result::Result::Ok(__codec_res_edqy) => __codec_res_edqy,
-						}
-					},
-					grandpa: {
-						let __codec_res_edqy = < < Grandpa as :: sp_runtime :: BoundToRuntimeAppPublic > :: Public as :: codec :: Decode > :: decode (__codec_input_edqy) ;
-						match __codec_res_edqy {
-							::core::result::Result::Err(e) =>
-								return ::core::result::Result::Err(
-									e.chain("Could not decode `SessionKeys::grandpa`"),
-								),
-							::core::result::Result::Ok(__codec_res_edqy) => __codec_res_edqy,
-						}
-					},
-				})
-			}
-		}
+		impl ::codec::Decode for SessionKeys {}
 	};
 	#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 	const _: () = {
-		impl ::scale_info::TypeInfo for SessionKeys {
-			type Identity = Self;
-			fn type_info() -> ::scale_info::Type {
-				::scale_info::Type::builder()
-					.path(::scale_info::Path::new("SessionKeys", "node_template_runtime::opaque"))
-					.type_params(::alloc::vec::Vec::new())
-					.composite(
-						::scale_info::build::Fields::named()
-							.field(|f| {
-								f.ty::<<Aura as ::sp_runtime::BoundToRuntimeAppPublic>::Public>()
-									.name("aura")
-									.type_name("<Aura as $crate::BoundToRuntimeAppPublic>::Public")
-							})
-							.field(|f| {
-								f.ty::<<Grandpa as ::sp_runtime::BoundToRuntimeAppPublic>::Public>()
-									.name("grandpa")
-									.type_name(
-										"<Grandpa as $crate::BoundToRuntimeAppPublic>::Public",
-									)
-							}),
-					)
-			}
-		};
+		impl ::scale_info::TypeInfo for SessionKeys {};
 	};
 	impl core::fmt::Debug for SessionKeys {
-		fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
-			fmt.debug_struct("SessionKeys")
-				.field("aura", &self.aura)
-				.field("grandpa", &self.grandpa)
-				.finish()
-		}
+		fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {}
 	}
 	#[doc(hidden)]
 	#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 	const _: () = {
 		use __opaque_keys_serde_import__SessionKeys as _serde;
 		#[automatically_derived]
-		impl __opaque_keys_serde_import__SessionKeys::Serialize for SessionKeys {
-			fn serialize<__S>(
-				&self,
-				__serializer: __S,
-			) -> __opaque_keys_serde_import__SessionKeys::__private::Result<__S::Ok, __S::Error>
-			where
-				__S: __opaque_keys_serde_import__SessionKeys::Serializer,
-			{
-				let mut __serde_state = match _serde::Serializer::serialize_struct(
-					__serializer,
-					"SessionKeys",
-					false as usize + 1 + 1,
-				) {
-					_serde::__private::Ok(__val) => __val,
-					_serde::__private::Err(__err) => {
-						return _serde::__private::Err(__err)
-					},
-				};
-				match _serde::ser::SerializeStruct::serialize_field(
-					&mut __serde_state,
-					"aura",
-					&self.aura,
-				) {
-					_serde::__private::Ok(__val) => __val,
-					_serde::__private::Err(__err) => {
-						return _serde::__private::Err(__err)
-					},
-				};
-				match _serde::ser::SerializeStruct::serialize_field(
-					&mut __serde_state,
-					"grandpa",
-					&self.grandpa,
-				) {
-					_serde::__private::Ok(__val) => __val,
-					_serde::__private::Err(__err) => {
-						return _serde::__private::Err(__err)
-					},
-				};
-				_serde::ser::SerializeStruct::end(__serde_state)
-			}
-		}
+		impl __opaque_keys_serde_import__SessionKeys::Serialize for SessionKeys {}
 	};
 	#[doc(hidden)]
 	#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 	const _: () = {
 		use __opaque_keys_serde_import__SessionKeys as _serde;
 		#[automatically_derived]
-		impl<'de> __opaque_keys_serde_import__SessionKeys::Deserialize<'de> for SessionKeys {
-			fn deserialize<__D>(
-				__deserializer: __D,
-			) -> __opaque_keys_serde_import__SessionKeys::__private::Result<Self, __D::Error>
-			where
-				__D: __opaque_keys_serde_import__SessionKeys::Deserializer<'de>,
-			{
-				#[allow(non_camel_case_types)]
-				#[doc(hidden)]
-				enum __Field {
-					__field0,
-					__field1,
-					__ignore,
-				}
-				#[doc(hidden)]
-				struct __FieldVisitor;
-				impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
-					type Value = __Field;
-					fn expecting(
-						&self,
-						__formatter: &mut _serde::__private::Formatter,
-					) -> _serde::__private::fmt::Result {
-						_serde::__private::Formatter::write_str(__formatter, "field identifier")
-					}
-					fn visit_u64<__E>(
-						self,
-						__value: u64,
-					) -> _serde::__private::Result<Self::Value, __E>
-					where
-						__E: _serde::de::Error,
-					{
-						match __value {
-							0u64 => _serde::__private::Ok(__Field::__field0),
-							1u64 => _serde::__private::Ok(__Field::__field1),
-							_ => _serde::__private::Ok(__Field::__ignore),
-						}
-					}
-					fn visit_str<__E>(
-						self,
-						__value: &str,
-					) -> _serde::__private::Result<Self::Value, __E>
-					where
-						__E: _serde::de::Error,
-					{
-						match __value {
-							"aura" => _serde::__private::Ok(__Field::__field0),
-							"grandpa" => _serde::__private::Ok(__Field::__field1),
-							_ => _serde::__private::Ok(__Field::__ignore),
-						}
-					}
-					fn visit_bytes<__E>(
-						self,
-						__value: &[u8],
-					) -> _serde::__private::Result<Self::Value, __E>
-					where
-						__E: _serde::de::Error,
-					{
-						match __value {
-							b"aura" => _serde::__private::Ok(__Field::__field0),
-							b"grandpa" => _serde::__private::Ok(__Field::__field1),
-							_ => _serde::__private::Ok(__Field::__ignore),
-						}
-					}
-				}
-				impl<'de> _serde::Deserialize<'de> for __Field {
-					#[inline]
-					fn deserialize<__D>(
-						__deserializer: __D,
-					) -> _serde::__private::Result<Self, __D::Error>
-					where
-						__D: _serde::Deserializer<'de>,
-					{
-						_serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
-					}
-				}
-				#[doc(hidden)]
-				struct __Visitor<'de> {
-					marker: _serde::__private::PhantomData<SessionKeys>,
-					lifetime: _serde::__private::PhantomData<&'de ()>,
-				}
-				impl<'de> _serde::de::Visitor<'de> for __Visitor<'de> {
-					type Value = SessionKeys;
-					fn expecting(
-						&self,
-						__formatter: &mut _serde::__private::Formatter,
-					) -> _serde::__private::fmt::Result {
-						_serde::__private::Formatter::write_str(__formatter, "struct SessionKeys")
-					}
-					#[inline]
-					fn visit_seq<__A>(
-						self,
-						mut __seq: __A,
-					) -> _serde::__private::Result<Self::Value, __A::Error>
-					where
-						__A: _serde::de::SeqAccess<'de>,
-					{
-						let __field0 = match match _serde::de::SeqAccess::next_element::<
-							<Aura as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-						>(&mut __seq)
-						{
-							_serde::__private::Ok(__val) => __val,
-							_serde::__private::Err(__err) => {
-								return _serde::__private::Err(__err)
-							},
-						} {
-							_serde::__private::Some(__value) => __value,
-							_serde::__private::None => {
-								return _serde::__private::Err(_serde::de::Error::invalid_length(
-									0usize,
-									&"struct SessionKeys with 2 elements",
-								))
-							},
-						};
-						let __field1 = match match _serde::de::SeqAccess::next_element::<
-							<Grandpa as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-						>(&mut __seq)
-						{
-							_serde::__private::Ok(__val) => __val,
-							_serde::__private::Err(__err) => {
-								return _serde::__private::Err(__err)
-							},
-						} {
-							_serde::__private::Some(__value) => __value,
-							_serde::__private::None => {
-								return _serde::__private::Err(_serde::de::Error::invalid_length(
-									1usize,
-									&"struct SessionKeys with 2 elements",
-								))
-							},
-						};
-						_serde::__private::Ok(SessionKeys { aura: __field0, grandpa: __field1 })
-					}
-					#[inline]
-					fn visit_map<__A>(
-						self,
-						mut __map: __A,
-					) -> _serde::__private::Result<Self::Value, __A::Error>
-					where
-						__A: _serde::de::MapAccess<'de>,
-					{
-						let mut __field0: _serde::__private::Option<
-							<Aura as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-						> = _serde::__private::None;
-						let mut __field1: _serde::__private::Option<
-							<Grandpa as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-						> = _serde::__private::None;
-						while let _serde::__private::Some(__key) =
-							match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
-								_serde::__private::Ok(__val) => __val,
-								_serde::__private::Err(__err) => {
-									return _serde::__private::Err(__err)
-								},
-							} {
-							match __key {
-								__Field::__field0 => {
-									if _serde::__private::Option::is_some(&__field0) {
-										return _serde::__private::Err(
-											<__A::Error as _serde::de::Error>::duplicate_field(
-												"aura",
-											),
-										)
-									}
-									__field0 = _serde::__private::Some(
-										match _serde::de::MapAccess::next_value::<
-											<Aura as ::sp_runtime::BoundToRuntimeAppPublic>::Public,
-										>(&mut __map)
-										{
-											_serde::__private::Ok(__val) => __val,
-											_serde::__private::Err(__err) => {
-												return _serde::__private::Err(__err)
-											},
-										},
-									);
-								},
-								__Field::__field1 => {
-									if _serde::__private::Option::is_some(&__field1) {
-										return _serde::__private::Err(
-											<__A::Error as _serde::de::Error>::duplicate_field(
-												"grandpa",
-											),
-										)
-									}
-									__field1 = _serde :: __private :: Some (match _serde :: de :: MapAccess :: next_value :: < < Grandpa as :: sp_runtime :: BoundToRuntimeAppPublic > :: Public > (& mut __map) { _serde :: __private :: Ok (__val) => __val , _serde :: __private :: Err (__err) => { return _serde :: __private :: Err (__err) ; } }) ;
-								},
-								_ => {
-									let _ = match _serde::de::MapAccess::next_value::<
-										_serde::de::IgnoredAny,
-									>(&mut __map)
-									{
-										_serde::__private::Ok(__val) => __val,
-										_serde::__private::Err(__err) => {
-											return _serde::__private::Err(__err)
-										},
-									};
-								},
-							}
-						}
-						let __field0 = match __field0 {
-							_serde::__private::Some(__field0) => __field0,
-							_serde::__private::None => {
-								match _serde::__private::de::missing_field("aura") {
-									_serde::__private::Ok(__val) => __val,
-									_serde::__private::Err(__err) => {
-										return _serde::__private::Err(__err)
-									},
-								}
-							},
-						};
-						let __field1 = match __field1 {
-							_serde::__private::Some(__field1) => __field1,
-							_serde::__private::None => {
-								match _serde::__private::de::missing_field("grandpa") {
-									_serde::__private::Ok(__val) => __val,
-									_serde::__private::Err(__err) => {
-										return _serde::__private::Err(__err)
-									},
-								}
-							},
-						};
-						_serde::__private::Ok(SessionKeys { aura: __field0, grandpa: __field1 })
-					}
-				}
-				#[doc(hidden)]
-				const FIELDS: &'static [&'static str] = &["aura", "grandpa"];
-				_serde::Deserializer::deserialize_struct(
-					__deserializer,
-					"SessionKeys",
-					FIELDS,
-					__Visitor {
-						marker: _serde::__private::PhantomData::<SessionKeys>,
-						lifetime: _serde::__private::PhantomData,
-					},
-				)
-			}
-		}
+		impl<'de> __opaque_keys_serde_import__SessionKeys::Deserialize<'de> for SessionKeys {}
 	};
 	impl SessionKeys {
 		/// Generate a set of keys with optionally using the given seed.
@@ -548,6 +187,11 @@ const _: () = {};
 /// up by `pallet_aura` to implement `fn slot_duration()`.
 ///
 /// Change this to adjust the block time.
+///这决定了我们要瞄准的平均预期块时间。
+///块将以“SLOT_duration”定义的最小持续时间产生。
+///“SLOT_DURATION”由“pallet_timestamp”拾取，而“pallet_ara”又由其拾取以实现“fn SLOT_DURATION（）”。
+///
+///更改此项以调整块时间。
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
@@ -560,104 +204,12 @@ pub fn native_version() -> NativeVersion {
 }
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub struct BlockHashCount;
-impl BlockHashCount {
-	/// Returns the value of this parameter type.
-	pub const fn get() -> BlockNumber {
-		2400
-	}
-}
-impl<_I: From<BlockNumber>> ::frame_support::traits::Get<_I> for BlockHashCount {
-	fn get() -> _I {
-		_I::from(Self::get())
-	}
-}
-impl ::frame_support::traits::TypedGet for BlockHashCount {
-	type Type = BlockNumber;
-	fn get() -> BlockNumber {
-		Self::get()
-	}
-}
 pub struct Version;
-impl Version {
-	/// Returns the value of this parameter type.
-	pub const fn get() -> RuntimeVersion {
-		VERSION
-	}
-}
-impl<_I: From<RuntimeVersion>> ::frame_support::traits::Get<_I> for Version {
-	fn get() -> _I {
-		_I::from(Self::get())
-	}
-}
-impl ::frame_support::traits::TypedGet for Version {
-	type Type = RuntimeVersion;
-	fn get() -> RuntimeVersion {
-		Self::get()
-	}
-}
 /// We allow for 2 seconds of compute with a 6 second average block time.
 pub struct BlockWeights;
-impl BlockWeights {
-	/// Returns the value of this parameter type.
-	pub fn get() -> frame_system::limits::BlockWeights {
-		frame_system::limits::BlockWeights::with_sensible_defaults(
-			Weight::from_parts(2u64 * WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
-			NORMAL_DISPATCH_RATIO,
-		)
-	}
-}
-impl<_I: From<frame_system::limits::BlockWeights>> ::frame_support::traits::Get<_I>
-	for BlockWeights
-{
-	fn get() -> _I {
-		_I::from(Self::get())
-	}
-}
-impl ::frame_support::traits::TypedGet for BlockWeights {
-	type Type = frame_system::limits::BlockWeights;
-	fn get() -> frame_system::limits::BlockWeights {
-		Self::get()
-	}
-}
 pub struct BlockLength;
-impl BlockLength {
-	/// Returns the value of this parameter type.
-	pub fn get() -> frame_system::limits::BlockLength {
-		frame_system::limits::BlockLength::max_with_normal_ratio(
-			5 * 1024 * 1024,
-			NORMAL_DISPATCH_RATIO,
-		)
-	}
-}
-impl<_I: From<frame_system::limits::BlockLength>> ::frame_support::traits::Get<_I> for BlockLength {
-	fn get() -> _I {
-		_I::from(Self::get())
-	}
-}
-impl ::frame_support::traits::TypedGet for BlockLength {
-	type Type = frame_system::limits::BlockLength;
-	fn get() -> frame_system::limits::BlockLength {
-		Self::get()
-	}
-}
 pub struct SS58Prefix;
-impl SS58Prefix {
-	/// Returns the value of this parameter type.
-	pub const fn get() -> u8 {
-		42
-	}
-}
-impl<_I: From<u8>> ::frame_support::traits::Get<_I> for SS58Prefix {
-	fn get() -> _I {
-		_I::from(Self::get())
-	}
-}
-impl ::frame_support::traits::TypedGet for SS58Prefix {
-	type Type = u8;
-	fn get() -> u8 {
-		Self::get()
-	}
-}
+
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
 	type BaseCallFilter = frame_support::traits::Everything;
@@ -1271,6 +823,8 @@ impl TryInto<pallet_template::Event<Runtime>> for RuntimeEvent {
 ///
 /// Origin is always created with the base filter configured in
 /// [`frame_system::Config::BaseCallFilter`].
+/// RuntimeOrigin 类型代表一个调用的Origin
+///始终使用[`frame_system:：Config:：BaseCallFilter`]中配置的BaseCallFilter创建Origin。
 pub struct RuntimeOrigin {
 	caller: OriginCaller,
 	filter: self::sp_api_hidden_includes_construct_runtime::hidden_include::sp_std::rc::Rc<
@@ -3682,6 +3236,55 @@ pub type Executive = frame_executive::Executive<
 >;
 pub struct RuntimeApi {}
 /// Implements all runtime apis for the client side.
+/// 这里的C: sp_api::CallApiAt<Block>就是Client
+/// impl<B, E, Block, RA> ProvideRuntimeApi<Block> for Client<B, E, Block, RA>
+/// where
+/// 	B: backend::Backend<Block>,
+/// 	E: CallExecutor<Block, Backend = B> + Send + Sync,
+/// 	Block: BlockT,
+/// 	RA: ConstructRuntimeApi<Block, Self> + Send + Sync,
+/// {
+/// 	type Api = <RA as ConstructRuntimeApi<Block, Self>>::RuntimeApi;
+///
+/// 	fn runtime_api(&self) -> ApiRef<Self::Api> {
+/// 		RA::construct_runtime_api(self)
+/// 	}
+/// }
+///
+/// Client和RuntimeApiImpl通过trait分别持有对方的实例
+/// Client通过持有的RuntimeApiImpl调用runtime提供的Api, 例如apply_extrinsic_with_context
+///
+/// RuntimeApiImpl在桥接函数内通过持有Client调用Client的call_api_at去调用CallExecutor去执行
+/// 执行交易就是stateMachine执行并记录状态变化
+/// 所以在stateMachine内使用NativeElseWasmExecutor调用dispatch找到Runtime实现的对应的函数去执行
+///
+/// 最终找到Runtime实现的apply_extrinsic, 内部调用的Executive的apply_extrinsic(这个在runtime内部是一个pallet)
+/// executive会调用Extrinsic的 function的dispatch方法, 这个function就是RuntimeCall
+///
+///
+///
+///
+/// 关于overlay层如何提交到trie提交到DB
+/// 在basic_authorship propose_with进行出块的时候
+/// 我们会先创建一个RuntimeApiImpl实例和一个BlockBuilder进行绑定, 此时初始化RuntimeApiImpl中的Overlay和Recorder
+/// 用来缓存当前块的读写集
+/// 当所有的交易执行完毕之后
+/// BlockBuilder会进行build 最终打包出一个块
+/// 这个时候会进行当前块的读写集缓存和前一个块状态下对应的世界状态进行合并
+///
+/// 1. 计算header header = self
+/// 			.api
+/// 			.finalize_block_with_context(self.parent_hash, ExecutionContext::BlockConstruction)?;
+/// 2. api记录的有recorder所以可以计算出 storageProof proof = self.api.extract_proof();
+///
+/// 3. BlockBuilder 持有Backend 所以可以获取到上一个块下的世界状态 state = self.backend.state_at(self.parent_hash)?;
+///
+/// 4. 有了上一个块下的世界状态, 前置区块hash, Api保存了当前块的OverlayChanges 所以可以合并得到当前块的世界状态树
+/// storage_changes = self
+/// 			.api
+/// 			.into_storage_changes(&state, self.parent_hash)
+/// 			.map_err(sp_blockchain::Error::StorageChanges)?;
+/// 最终runtimeApiImpl是调用state-machine/overlayed_changes里提供的into_storage_changes方法
 #[cfg(any(feature = "std", test))]
 pub struct RuntimeApiImpl<Block: sp_api::BlockT, C: sp_api::CallApiAt<Block> + 'static> {
 	call: &'static C,
@@ -3756,8 +3359,30 @@ impl<Block: sp_api::BlockT, C: sp_api::CallApiAt<Block>> sp_api::ApiExt<Block>
 			sp_api::ProofRecorder::<Block>::drain_storage_proof(recorder)
 		})
 	}
+
+	/// 在basic_authorship propose_with进行出块的时候
+	/// 我们会先创建一个RuntimeApiImpl实例和一个BlockBuilder进行绑定, 此时初始化RuntimeApiImpl中的Overlay和Recorder
+	/// 用来缓存当前块的读写集
+	/// 当所有的交易执行完毕之后
+	/// BlockBuilder会进行build 最终打包出一个块
+	/// 这个时候会进行当前块的读写集缓存和前一个块状态下对应的世界状态进行合并
+	///
+	/// 1. 计算header header = self
+	/// 			.api
+	/// 			.finalize_block_with_context(self.parent_hash, ExecutionContext::BlockConstruction)?;
+	/// 2. api记录的有recorder所以可以计算出 storageProof proof = self.api.extract_proof();
+	///
+	/// 3. BlockBuilder 持有Backend 所以可以获取到上一个块下的世界状态 state = self.backend.state_at(self.parent_hash)?;
+	///
+	/// 4. 有了上一个块下的世界状态, 前置区块hash, Api保存了当前块的OverlayChanges 所以可以合并得到当前块的世界状态树
+	/// storage_changes = self
+	/// 			.api
+	/// 			.into_storage_changes(&state, self.parent_hash)
+	/// 			.map_err(sp_blockchain::Error::StorageChanges)?;
+	/// 最终runtimeApiImpl是调用state-machine/overlayed_changes里提供的into_storage_changes方法
 	fn into_storage_changes(
 		&self,
+		// 前置区块的state
 		backend: &Self::StateBackend,
 		parent_hash: Block::Hash,
 	) -> core::result::Result<sp_api::StorageChanges<C::StateBackend, Block>, String>

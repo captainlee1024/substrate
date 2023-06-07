@@ -607,6 +607,7 @@ pub trait ApiExt<Block: BlockT> {
 	/// api functions.
 	///
 	/// After executing this function, all collected changes are reset.
+	/// 将 api 对象转换为执行运行时 api 函数时完成的存储更改。执行此功能后，将重置所有收集的更改。
 	fn into_storage_changes<B: StateBackend<HashingFor<Block>>>(
 		&self,
 		backend: &B,

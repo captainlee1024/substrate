@@ -34,6 +34,8 @@ use crate::LayoutV1 as Layout;
 /// The proof consists of the set of serialized nodes in the storage trie accessed when looking up
 /// the keys covered by the proof. Verifying the proof requires constructing the partial trie from
 /// the serialized nodes and performing the key lookups.
+/// 证明某些键值对包含在存储尝试中的证明。证明包含存储值，以便尚未有权访问键值对的验证者可以重建部分存储后端。
+/// 证明由查找证明所涵盖的密钥时访问的存储trie中的一组序列化节点组成。验证证明需要从序列化节点构造部分 trie 并执行密钥查找。
 #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode, TypeInfo)]
 pub struct StorageProof {
 	trie_nodes: BTreeSet<Vec<u8>>,
