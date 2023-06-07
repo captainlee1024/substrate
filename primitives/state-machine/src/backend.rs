@@ -172,6 +172,20 @@ where
 /// to it.
 ///
 /// The clone operation (if implemented) should be cheap.
+///
+/// 状态后端用于读取状态数据，并且可以向其提交更改。
+///
+/// 如果支持Clone, 注意实现的时候不能带来过大的开销
+///
+/// 在Client/api/backend 中指定为该类型
+/// 	type State: StateBackend<HashFor<Block>>
+/// 		+ Send
+/// 		+ AsTrieBackend<
+/// 			HashFor<Block>,
+/// 			TrieBackendStorage = <Self::State as StateBackend<HashFor<Block>>>::TrieBackendStorage,
+/// 		>;
+///
+/// AsTrieBackend中的TrieBackendStorage关联类型指定为我们这个Backend关联类型中指定的TrieBackendStorage类型
 pub trait Backend<H: Hasher>: sp_std::fmt::Debug {
 	/// An error type when fetching data is not possible.
 	type Error: super::Error;
@@ -180,9 +194,11 @@ pub trait Backend<H: Hasher>: sp_std::fmt::Debug {
 	type Transaction: Consolidate + Default + Send;
 
 	/// Type of trie backend storage.
+	/// trie backend essence 使用的键值对存储。
 	type TrieBackendStorage: TrieBackendStorage<H, Overlay = Self::Transaction>;
 
 	/// Type of the raw storage iterator.
+	/// 原始存储迭代器
 	type RawIter: StorageIterator<H, Backend = Self, Error = Self::Error>;
 
 	/// Get keyed storage or None if there is nothing associated.
@@ -368,6 +384,7 @@ pub trait Backend<H: Hasher>: sp_std::fmt::Debug {
 }
 
 /// Something that can be converted into a [`TrieBackend`].
+/// 可以转换为['TrieBackend']的东西。
 #[cfg(feature = "std")]
 pub trait AsTrieBackend<H: Hasher, C = sp_trie::cache::LocalTrieCache<H>> {
 	/// Type of trie backend storage.
@@ -378,6 +395,7 @@ pub trait AsTrieBackend<H: Hasher, C = sp_trie::cache::LocalTrieCache<H>> {
 }
 
 /// Trait that allows consolidate two transactions together.
+/// 允许将两个事务合并在一起的特征。
 pub trait Consolidate {
 	/// Consolidate two transactions into one.
 	fn consolidate(&mut self, other: Self);
@@ -406,6 +424,7 @@ where
 }
 
 /// Wrapper to create a [`RuntimeCode`] from a type that implements [`Backend`].
+/// 包装实现了Backend的类型, 用来获取存储在链上的runtime wasm code
 #[cfg(feature = "std")]
 pub struct BackendRuntimeCode<'a, B, H> {
 	backend: &'a B,

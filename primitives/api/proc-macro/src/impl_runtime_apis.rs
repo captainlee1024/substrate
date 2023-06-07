@@ -463,6 +463,9 @@ fn generate_api_impl_for_runtime(impls: &[ItemImpl]) -> Result<TokenStream> {
 /// This requires us to replace the runtime `Block` with the node `Block`,
 /// `impl Api for Runtime` with `impl Api for RuntimeApi` and replace the method implementations
 /// with code that calls into the runtime.
+/// 用于转换 impl Api for Runtime 为 impl Api for RuntimeApi 的辅助数据结构。
+/// 这要求我们将runtime Block 替换为 node Block，
+/// 将“impl Api for runtime”替换为“impl Api for RuntimeApi”，并将方法实现替换为调用运行时的代码。
 struct ApiRuntimeImplToApiRuntimeApiImpl<'a> {
 	runtime_block: &'a TypePath,
 }

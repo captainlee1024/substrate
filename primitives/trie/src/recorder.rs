@@ -19,6 +19,7 @@
 //!
 //! Provides an implementation of the [`TrieRecorder`](trie_db::TrieRecorder) trait. It can be used
 //! to record storage accesses to the state to generate a [`StorageProof`].
+//! 提供特征的 TrieRecorder 实现。它可用于记录对状态的存储访问，以生成 StorageProof.
 
 use crate::{NodeCodec, StorageProof};
 use codec::Encode;

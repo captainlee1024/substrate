@@ -16,6 +16,7 @@
 // limitations under the License.
 
 //! Trie-based state machine backend.
+//! 基于 Trie 的状态机后端。
 
 #[cfg(feature = "std")]
 use crate::backend::AsTrieBackend;
@@ -115,6 +116,8 @@ where
 	/// backend.
 	///
 	/// The backend storage and the cache will be taken from `other`.
+	///
+	/// 包装给定的 ['TrieBackend']。例如，如果应该记录对trie的所有访问，而其他一些功能仍然使用非记录后端，则可以使用此方法。后端存储和缓存将从“其他”获取
 	pub fn wrap(other: &TrieBackend<S, H, C>) -> TrieBackendBuilder<&S, H, &C> {
 		TrieBackendBuilder {
 			storage: other.essence.backend_storage(),
@@ -223,6 +226,10 @@ fn access_cache<T, R>(cell: &CacheCell<T>, callback: impl FnOnce(&mut T) -> R) -
 }
 
 /// Patricia trie-based backend. Transaction type is an overlay of changes to commit.
+///
+///		Backend trait: 状态后端用于读取状态数据，并且可以向其提交更改。如果支持Clone, 注意实现的时候不能带来过大的开销
+///
+/// TrieBackend实现了上面的trait
 pub struct TrieBackend<S: TrieBackendStorage<H>, H: Hasher, C = LocalTrieCache<H>> {
 	pub(crate) essence: TrieBackendEssence<S, H, C>,
 	next_storage_key_cache: CacheCell<Option<CachedIter<S, H, C>>>,
@@ -405,6 +412,12 @@ where
 impl<S: TrieBackendStorage<H>, H: Hasher, C> AsTrieBackend<H, C> for TrieBackend<S, H, C> {
 	type TrieBackendStorage = S;
 
+	/*
+		pub type DbState<B> =
+		sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+		在RefTrackingState里指定了S的类型为dyn sp_state_machine::Storage
+		这个trait实现了TrieBackendStorage
+	 */
 	fn as_trie_backend(&self) -> &TrieBackend<S, H, C> {
 		self
 	}

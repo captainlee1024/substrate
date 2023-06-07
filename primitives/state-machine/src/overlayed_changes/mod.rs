@@ -268,6 +268,32 @@ impl OverlayedChanges {
 	pub fn set_storage(&mut self, key: StorageKey, val: Option<StorageValue>) {
 		let size_write = val.as_ref().map(|x| x.len() as u64).unwrap_or(0);
 		self.stats.tally_write_overlay(size_write);
+		// 写入top level的OverLayedChangeSet
+		// Top level storage changes.
+		// 	top: OverlayedChangeSet,
+		// 而OverlayedChangeSet是一个OverlyedMap
+		// pub type OverlayedChangeSet = OverlayedMap<StorageKey, Option<StorageValue>>;
+		// 结构如下
+		/*
+			/// Holds a set of changes with the ability modify them using nested transactions.
+			#[derive(Debug, Clone)]
+			pub struct OverlayedMap<K, V> {
+				/// Stores the changes that this overlay constitutes.
+				///
+				changes: BTreeMap<K, OverlayedEntry<V>>,
+				/// Stores which keys are dirty per transaction. Needed in order to determine which
+				/// values to merge into the parent transaction on commit. The length of this vector
+				/// therefore determines how many nested transactions are currently open (depth).
+				/// 一个5层的HashSet用来记录
+				dirty_keys: DirtyKeysSets<K>,
+				/// The number of how many transactions beginning from the first transactions are started
+				/// by the client. Those transactions are protected against close (commit, rollback)
+				/// when in runtime mode.
+				num_client_transactions: usize,
+				/// Determines whether the node is using the overlay from the client or the runtime.
+				execution_mode: ExecutionMode,
+			}
+		 */
 		self.top.set(key, val, self.extrinsic_index());
 	}
 
@@ -351,8 +377,14 @@ impl OverlayedChanges {
 	/// `commit_transaction` before this overlay can be converted into storage changes.
 	///
 	/// Changes made without any open transaction are committed immediately.
+	///
+	/// 启动新的嵌套事务。
+	/// 这允许提交或回滚此事务打开时所做的所有更改。任何事务都必须由其中之一 rollback_transaction 关闭，或者 commit_transaction 才能将此覆盖转换为存储更改。
+	/// 在没有任何打开事务的情况下所做的更改将立即提交
 	pub fn start_transaction(&mut self) {
+		// top 开启transaction
 		self.top.start_transaction();
+		// 每一个children也开启新的transaction
 		for (_, (changeset, _)) in self.children.iter_mut() {
 			changeset.start_transaction();
 		}
@@ -382,6 +414,8 @@ impl OverlayedChanges {
 	///
 	/// Any changes made during that transaction are committed. Returns an error if there
 	/// is no open transaction that can be committed.
+	///
+	/// 提交最后一个启动的transaction
 	pub fn commit_transaction(&mut self) -> Result<(), NoOpenTransaction> {
 		self.top.commit_transaction()?;
 		for (_, (changeset, _)) in self.children.iter_mut() {
@@ -496,6 +530,31 @@ impl OverlayedChanges {
 	}
 
 	/// Convert this instance with all changes into a [`StorageChanges`] instance.
+	///
+	/// 将此包含所有更改的实例转换为 [“存储更改”] 实例。
+	///
+	/// 用来将该块的overlay合并到前一个块状态下的世界状态中
+	///
+	/// 在basic_authorship propose_with进行出块的时候
+	/// 我们会先创建一个RuntimeApiImpl实例和一个BlockBuilder进行绑定, 此时初始化RuntimeApiImpl中的Overlay和Recorder
+	/// 用来缓存当前块的读写集
+	/// 当所有的交易执行完毕之后
+	/// BlockBuilder会进行build 最终打包出一个块
+	/// 这个时候会进行当前块的读写集缓存和前一个块状态下对应的世界状态进行合并
+	///
+	/// 1. 计算header header = self
+	/// 			.api
+	/// 			.finalize_block_with_context(self.parent_hash, ExecutionContext::BlockConstruction)?;
+	/// 2. api记录的有recorder所以可以计算出 storageProof proof = self.api.extract_proof();
+	///
+	/// 3. BlockBuilder 持有Backend 所以可以获取到上一个块下的世界状态 state = self.backend.state_at(self.parent_hash)?;
+	///
+	/// 4. 有了上一个块下的世界状态, 前置区块hash, Api保存了当前块的OverlayChanges 所以可以合并得到当前块的世界状态树
+	/// storage_changes = self
+	/// 			.api
+	/// 			.into_storage_changes(&state, self.parent_hash)
+	/// 			.map_err(sp_blockchain::Error::StorageChanges)?;
+	/// 最终runtimeApiImpl是调用的这里的实现就是下面这个方法
 	#[cfg(feature = "std")]
 	pub fn into_storage_changes<B: Backend<H>, H: Hasher>(
 		mut self,
@@ -510,6 +569,7 @@ impl OverlayedChanges {
 	}
 
 	/// Drain all changes into a [`StorageChanges`] instance. Leave empty overlay in place.
+	/// 将所有更改排空到 [“StorageChanges”] 实例中。将空覆盖保留在原位。
 	pub fn drain_storage_changes<B: Backend<H>, H: Hasher>(
 		&mut self,
 		backend: &B,

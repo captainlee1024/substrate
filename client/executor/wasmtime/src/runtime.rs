@@ -564,6 +564,8 @@ enum CodeSupplyMode<'a> {
 ///
 /// The `H` generic parameter is used to statically pass a set of host functions which are exposed
 /// to the runtime.
+/// 创建一个给定 WasmtimeRuntime 代码的新代码。此函数执行从 Wasm 到机器码的转换，这可能在计算上很重。
+/// H泛型参数用于静态传递一组向运行时公开的主机函数
 pub fn create_runtime<H>(
 	blob: RuntimeBlob,
 	config: Config,

@@ -31,16 +31,32 @@ use sp_state_machine::{
 use std::sync::Arc;
 
 /// State abstraction for recording stats about state access.
+/// 用于记录有关状态访问的统计信息的状态抽象。
+///
+/// RecordStatsState实现了state-machine 里的Backend trait
+///	而state的S被指定为了RefTrackingState, 并且RefTrackingState实现了state-machine里的Backend trait
+/// RecordStatsState实际上是对RefTrackingState的封装, 然后额外做了一些其他的记录
+/// 
+/// 而RefTrackingState对Backend的实现实际上是对其字段DbState对Backend实现的封装
+/// DbState是state-machine里TrieBackend结构体的别名
+/// 所以最终这里的Backend实际上是对state-machine里的TrieBackend实现的封装
+/// 而这个RecordStatsState实际上又是提供给state-machine做backend用的
+/// 所以state-machine里的backend字段使用的Backend接口的实现实际上是state-machine TrieBackend提供的
+/// TrieBackend又是对其内部字段pub(crate) essence: TrieBackendEssence<S, H, C>,的封装
+/// 所以最终Backend的实现逻辑委托到了TrieBackendEssence上
 pub struct RecordStatsState<S, B: BlockT> {
 	/// Usage statistics
+	/// 使用情况统计
 	usage: StateUsageStats,
 	/// State machine registered stats
+	/// 状态机注册统计信息
 	overlay_stats: sp_state_machine::StateMachineStats,
 	/// Backing state.
 	state: S,
 	/// The hash of the block is state belongs to.
 	block_hash: Option<B::Hash>,
 	/// The usage statistics of the backend. These will be updated on drop.
+	/// 后端的使用情况统计信息。这些将在删除时更新。
 	state_usage: Arc<StateUsageStats>,
 }
 

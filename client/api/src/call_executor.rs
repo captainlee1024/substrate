@@ -67,6 +67,8 @@ pub trait CallExecutor<B: BlockT>: RuntimeVersionOf {
 	/// No changes are made.
 	/// Before executing the method, passed header is installed as the current header
 	/// of the execution context.
+	/// 在给定哈希块中的状态之上执行上下文调用。
+	/// 不进行任何更改。在执行该方法之前，传递的标头将作为执行上下文的当前标头安装
 	fn contextual_call(
 		&self,
 		at_hash: B::Hash,

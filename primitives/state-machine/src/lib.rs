@@ -300,19 +300,109 @@ mod execution {
 		H: Hasher,
 		B: Backend<H>,
 	{
-		backend: &'a B, // 访问数据的能力
+		// 该字段来自Client的Backend.state_at(block_hash)
+		//
+		// 	type State = RecordStatsState<RefTrackingState<Block>, Block>;
+		//  它在Backend里指定为了该类型, 它的关联类型约束如下
+		//	/// Associated state backend type.
+		// 	type State: StateBackend<HashFor<Block>>
+		// 		+ Send
+		// 		+ AsTrieBackend<
+		// 			HashFor<Block>,
+		// 			TrieBackendStorage = <Self::State as StateBackend<HashFor<Block>>>::TrieBackendStorage,
+		// 		>;
+		// sc_db::record_stats_state::RecordStatsState
+		//
+		//
+		/*	RecordStatsState：
+			/// State abstraction for recording stats about state access.
+			/// 用于记录有关状态访问的统计信息的状态抽象。
+			pub struct RecordStatsState<S, B: BlockT> {
+				/// Usage statistics
+				usage: StateUsageStats,
+				/// State machine registered stats
+				overlay_stats: sp_state_machine::StateMachineStats,
+				/// Backing state.
+				state: S,
+				/// The hash of the block is state belongs to.
+				block_hash: Option<B::Hash>,
+				/// The usage statistics of the backend. These will be updated on drop.
+				state_usage: Arc<StateUsageStats>,
+			}
+
+			/// A reference tracking state.
+			/// 引用跟踪状态
+			/// It makes sure that the hash we are using stays pinned in storage
+			/// until this structure is dropped.
+			/// 它确保我们使用的哈希保持固定在存储中，直到删除此结构。
+			pub struct RefTrackingState<Block: BlockT> {
+				// /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
+				// pub type DbState<B> =
+				// 	sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+				// 这里的DbState是state-machine的TrieBackend结构体
+				/*
+					impl<H: Hasher> TrieBackendStorage<H> for Arc<dyn Storage<H>> {
+						type Overlay = sp_trie::PrefixedMemoryDB<H>;
+
+						fn get(&self, key: &H::Out, prefix: Prefix) -> Result<Option<DBValue>> {
+							Storage::<H>::get(std::ops::Deref::deref(self), key, prefix)
+						}
+					}
+
+					pub struct TrieBackend<S: TrieBackendStorage<H>, H: Hasher, C = LocalTrieCache<H>> {
+						pub(crate) essence: TrieBackendEssence<S, H, C>,
+						next_storage_key_cache: CacheCell<Option<CachedIter<S, H, C>>>,
+					}
+
+					这里指定的是Storage, 而TrieBackend里指定的是TrieBackendStorage
+					因为Storage trait 实现了TrieBackendStorage trait
+					该trait用来获取一个trie node根据指定的前缀和key
+					而在这里的storageDb实现了该Storage trait
+
+					/// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
+					pub type DbState<B> =
+					sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+			 */
+				state: DbState<Block>,
+				/*
+					struct StorageDb<Block: BlockT> {
+						pub db: Arc<dyn Database<DbHash>>,
+						pub state_db: StateDb<Block::Hash, Vec<u8>, StateMetaDb>,
+						prefix_keys: bool,
+					}
+				 */
+				storage: Arc<StorageDb<Block>>,
+				parent_hash: Option<Block::Hash>,
+			}
+
+		 */
+		/// State abstraction for recording stats about state access.
+		/// 用于记录有关状态访问的统计信息的状态抽象。
+		///
+		/// RecordStatsState实现了state-machine 里的Backend trait
+		///	而state的S被指定为了RefTrackingState, 并且RefTrackingState实现了state-machine里的Backend trait
+		/// RecordStatsState实际上是对RefTrackingState的封装, 然后额外做了一些其他的记录
+		///
+		/// 而RefTrackingState对Backend的实现实际上是对其字段DbState对Backend实现的封装
+		/// DbState是state-machine里TrieBackend结构体的别名
+		/// 所以最终这里的Backend实际上是对state-machine里的TrieBackend实现的封装
+		/// 而这个RecordStatsState实际上又是提供给state-machine做backend用的
+		/// 所以state-machine里的backend字段使用的Backend接口的实现实际上是state-machine TrieBackend提供的
+		/// TrieBackend又是对其内部字段pub(crate) essence: TrieBackendEssence<S, H, C>,的封装
+		/// 所以最终Backend的实现逻辑委托到了TrieBackendEssence上
+		backend: &'a B, // 访问数据的能力, 持有stateDb和DataBases
 		exec: &'a Exec, // 执行Block的能力 因为stateMachine要执行区块
-		method: &'a str,
-		call_data: &'a [u8],
+		method: &'a str, // executor传入
+		call_data: &'a [u8], // executor传入, 包含了Extrinsic
 		overlay: &'a mut OverlayedChanges, // 保存执行后的结果, 因为stateMachine要先保存结果等块最终确定再提交
-		extensions: Extensions,
-		storage_transaction_cache: Option<&'a mut StorageTransactionCache<B::Transaction, H>>,
-		runtime_code: &'a RuntimeCode<'a>,
-		stats: StateMachineStats,
+		extensions: Extensions, // 注册给该stateMachine使用的拓展
+		storage_transaction_cache: Option<&'a mut StorageTransactionCache<B::Transaction, H>>, // tx cache
+		runtime_code: &'a RuntimeCode<'a>, // runtime wasm code
+		stats: StateMachineStats, //初始化新的
 		/// The hash of the block the state machine will be executed on.
 		///
 		/// Used for logging.
-		parent_hash: Option<H::Out>,
+		parent_hash: Option<H::Out>, // 前一个块的hash
 		context: CallContext,
 	}
 
@@ -323,6 +413,7 @@ mod execution {
 	{
 		fn drop(&mut self) {
 			self.backend.register_overlay_stats(&self.stats);
+			self.backend
 		}
 	}
 
@@ -478,6 +569,12 @@ mod execution {
 		}
 
 		fn execute_call_with_native_else_wasm_strategy(&mut self) -> CallResult<Exec::Error> {
+			// 注意, 这是针对一笔Extrinsic的
+			// 在这里先启动一个transaction
+			// 在execute_aux里会将top level的transaction交给runtime管理, runtime有权rollback
+			// 但是其他的runtime无权rollback
+			// 然后根据overlay和当前的transaction cache以及backend构造ext然后开始执行
+			// 最后返回在下面commit或者rollback
 			self.overlay.start_transaction();
 			let (result, was_native) = self.execute_aux(true);
 
@@ -530,6 +627,7 @@ mod execution {
 	}
 
 	/// Prove execution using the given state backend, overlayed changes, and call executor.
+	/// 使用给定的状态后端、覆盖的更改和调用执行器证明执行。
 	pub fn prove_execution<B, H, Exec>(
 		backend: &mut B,
 		overlay: &mut OverlayedChanges,

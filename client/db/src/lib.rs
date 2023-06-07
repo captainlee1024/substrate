@@ -100,6 +100,24 @@ pub use bench::BenchmarkingState;
 
 const CACHE_HEADERS: usize = 8;
 
+/*
+		impl<H: Hasher> TrieBackendStorage<H> for Arc<dyn Storage<H>> {
+			type Overlay = sp_trie::PrefixedMemoryDB<H>;
+
+			fn get(&self, key: &H::Out, prefix: Prefix) -> Result<Option<DBValue>> {
+				Storage::<H>::get(std::ops::Deref::deref(self), key, prefix)
+			}
+		}
+
+		pub struct TrieBackend<S: TrieBackendStorage<H>, H: Hasher, C = LocalTrieCache<H>> {
+			pub(crate) essence: TrieBackendEssence<S, H, C>,
+			next_storage_key_cache: CacheCell<Option<CachedIter<S, H, C>>>,
+		}
+
+		这里指定的是Storage, 而TrieBackend里指定的是TrieBackendStorage
+		因为Storage trait 实现了TrieBackendStorage trait
+		该trait用来获取一个trie node根据指定的前缀和key
+ */
 /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
 pub type DbState<B> =
 	sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
@@ -135,7 +153,41 @@ enum DbExtrinsic<B: BlockT> {
 /// It makes sure that the hash we are using stays pinned in storage
 /// until this structure is dropped.
 pub struct RefTrackingState<Block: BlockT> {
+	// /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
+	// pub type DbState<B> =
+	// 	sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+	// 这里的DbState是state-machine的TrieBackend结构体
+	/*
+		impl<H: Hasher> TrieBackendStorage<H> for Arc<dyn Storage<H>> {
+			type Overlay = sp_trie::PrefixedMemoryDB<H>;
+
+			fn get(&self, key: &H::Out, prefix: Prefix) -> Result<Option<DBValue>> {
+				Storage::<H>::get(std::ops::Deref::deref(self), key, prefix)
+			}
+		}
+
+		pub struct TrieBackend<S: TrieBackendStorage<H>, H: Hasher, C = LocalTrieCache<H>> {
+			pub(crate) essence: TrieBackendEssence<S, H, C>,
+			next_storage_key_cache: CacheCell<Option<CachedIter<S, H, C>>>,
+		}
+
+		这里指定的是Storage, 而TrieBackend里指定的是TrieBackendStorage
+		因为Storage trait 实现了TrieBackendStorage trait
+		该trait用来获取一个trie node根据指定的前缀和key
+		而在这里的storageDb实现了该Storage trait
+
+		/// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
+		pub type DbState<B> =
+		sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+ */
 	state: DbState<Block>,
+	/*
+		struct StorageDb<Block: BlockT> {
+			pub db: Arc<dyn Database<DbHash>>,
+			pub state_db: StateDb<Block::Hash, Vec<u8>, StateMetaDb>,
+			prefix_keys: bool,
+		}
+	 */
 	storage: Arc<StorageDb<Block>>,
 	parent_hash: Option<Block::Hash>,
 }
@@ -185,6 +237,14 @@ impl<B: BlockT> StorageIterator<HashFor<B>> for RawIter<B> {
 	}
 }
 
+// RecordStatsState对这里的state-machine Backend的实现进行了封装, 额外做了一些记录
+// 而这里的实现实际上是对另一套实现的封装
+// /// DB-backed patricia trie state, transaction type is an overlay of changes to commit.
+// pub type DbState<B> =
+// 	sp_state_machine::TrieBackend<Arc<dyn sp_state_machine::Storage<HashFor<B>>>, HashFor<B>>;
+//
+// 即, 这里的DBState是state-machine里的trieBackend
+// 所以这里是对 state-machine里的TrieBackend的封装
 impl<B: BlockT> StateBackend<HashFor<B>> for RefTrackingState<B> {
 	type Error = <DbState<B> as StateBackend<HashFor<B>>>::Error;
 	type Transaction = <DbState<B> as StateBackend<HashFor<B>>>::Transaction;
@@ -1094,16 +1154,28 @@ impl<T: Clone> FrozenForDuration<T> {
 /// Disk backend keeps data in a key-value store. In archive mode, trie nodes are kept from all
 /// blocks. Otherwise, trie nodes are kept only from some recent blocks.
 pub struct Backend<Block: BlockT> {
+	// 包含了DataBase和State Db(State cache在哪儿)
 	storage: Arc<StorageDb<Block>>,
 	offchain_storage: offchain::LocalStorage,
+	// 用于保存区块
+	// 包含了DataBases header_metadata_cache headerCache pinnedBlockCache
 	blockchain: BlockchainDb<Block>,
 	canonicalization_delay: u64,
 	import_lock: Arc<RwLock<()>>,
 	is_archive: bool,
+	// 修剪设置
 	blocks_pruning: BlocksPruning,
+	// 有些值冻结了一段时间。
+	// 如果自值实例化以来未经过时间duration，则返回当前冻结值。否则，您必须提供一个新值，该值将再次冻结duration时间
 	io_stats: FrozenForDuration<(kvdb::IoStats, StateUsageInfo)>,
+	// 状态查询的累积使用情况统计信息。
 	state_usage: Arc<StateUsageStats>,
+	// perfix MemoryDb
 	genesis_state: RwLock<Option<Arc<DbGenesisStorage<Block>>>>,
+	// 共享 trie 缓存。
+	// 它应该为每个节点实例化一次。它将保存所有操作的 trie 节点和值到状态。
+	// 如果不使用所有可用内存，它将确保保持在通过启动时给出 CacheSize 的范围内。
+	// 此对象的实例可以在多个线程之间共享
 	shared_trie_cache: Option<sp_trie::cache::SharedTrieCache<HashFor<Block>>>,
 }
 

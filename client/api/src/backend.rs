@@ -500,6 +500,16 @@ pub trait StorageProvider<Block: BlockT, B: Backend<Block>> {
 /// While a block is pinned, its state is also preserved.
 ///
 /// The backend should internally reference count the number of pin / unpin calls.
+/// 
+/// 客户端后端。
+/// 管理数据层。
+/// 状态修剪
+/// 当 中的 state_at 对象处于活动状态时，不应修剪该状态。后端应在内部引用计数其状态对象。
+/// 这同样适用于实时 BlockImportOperations：当基于父级 P 构建的导入操作处于活动状态时，不应修剪 for P 的状态。
+/// 块修剪
+/// 用户可以通过调用 pin_block来固定内存中的块。修剪块时，其值将保留在内存缓存中，直到通过 取消 unpin_block固定。
+/// 固定块时，也会保留其状态。
+/// 后端应在内部引用计数 pin/取消固定调用数
 pub trait Backend<Block: BlockT>: AuxStore + Send + Sync {
 	/// Associated block insertion operation type.
 	type BlockImportOperation: BlockImportOperation<Block, State = Self::State>;

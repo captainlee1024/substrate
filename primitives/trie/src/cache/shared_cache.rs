@@ -241,6 +241,9 @@ type SharedNodeCacheMap<H> =
 ///
 /// Internally this stores all cached nodes in a [`LruMap`]. It ensures that when updating the
 /// cache, that the cache stays within its allowed bounds.
+///
+/// shared node cache。
+/// 在内部，这会将所有缓存节点 存储在LruMap. 它确保在更新缓存时，缓存保持在允许的范围内。
 pub(super) struct SharedNodeCache<H>
 where
 	H: AsRef<[u8]>,

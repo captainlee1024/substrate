@@ -74,35 +74,15 @@ pub mod pallet {
     ///			the on-chain logic.
     ///
     pub struct Pallet<T>(frame_support::sp_std::marker::PhantomData<(T)>);
-    const _: () = {
-        impl<T> core::clone::Clone for Pallet<T> {
-            fn clone(&self) -> Self {
-                Self(core::clone::Clone::clone(&self.0))
-            }
-        }
-    };
-    const _: () = {
-        impl<T> core::cmp::Eq for Pallet<T> {}
-    };
-    const _: () = {
-        impl<T> core::cmp::PartialEq for Pallet<T> {
-            fn eq(&self, other: &Self) -> bool {
-                true && self.0 == other.0
-            }
-        }
-    };
-    const _: () = {
-        impl<T> core::fmt::Debug for Pallet<T> {
-            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
-                fmt.debug_tuple("Pallet").field(&self.0).finish()
-            }
-        }
-    };
+
     /// Configure the pallet by specifying the parameters and types on which it depends.
+    /// 通过指定pallet所依赖的参数和类型来配置pallet
     pub trait Config: frame_system::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
+        /// 由于此pallet发出事件，因此它取决于runtime对事件的定义。
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Type representing the weight of this pallet
+        /// 表示此pallet weightInfo 的类型
         type WeightInfo: WeightInfo;
     }
     #[allow(type_alias_bounds)]
@@ -125,20 +105,6 @@ pub mod pallet {
     }
     const _: () = {
         impl<T: Config> core::clone::Clone for Event<T> {
-            fn clone(&self) -> Self {
-                match self {
-                    Self::SomethingStored {
-                        ref something,
-                        ref who,
-                    } => Self::SomethingStored {
-                        something: core::clone::Clone::clone(something),
-                        who: core::clone::Clone::clone(who),
-                    },
-                    Self::__Ignore(ref _0, ref _1) => {
-                        Self::__Ignore(core::clone::Clone::clone(_0), core::clone::Clone::clone(_1))
-                    }
-                }
-            }
         }
     };
     const _: () = {
@@ -146,43 +112,10 @@ pub mod pallet {
     };
     const _: () = {
         impl<T: Config> core::cmp::PartialEq for Event<T> {
-            fn eq(&self, other: &Self) -> bool {
-                match (self, other) {
-                    (
-                        Self::SomethingStored { something, who },
-                        Self::SomethingStored {
-                            something: _0,
-                            who: _1,
-                        },
-                    ) => true && something == _0 && who == _1,
-                    (Self::__Ignore(_0, _1), Self::__Ignore(_0_other, _1_other)) => {
-                        true && _0 == _0_other && _1 == _1_other
-                    }
-                    (Self::SomethingStored { .. }, Self::__Ignore { .. }) => false,
-                    (Self::__Ignore { .. }, Self::SomethingStored { .. }) => false,
-                }
-            }
         }
     };
     const _: () = {
         impl<T: Config> core::fmt::Debug for Event<T> {
-            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
-                match *self {
-                    Self::SomethingStored {
-                        ref something,
-                        ref who,
-                    } => fmt
-                        .debug_struct("Event::SomethingStored")
-                        .field("something", &something)
-                        .field("who", &who)
-                        .finish(),
-                    Self::__Ignore(ref _0, ref _1) => fmt
-                        .debug_tuple("Event::__Ignore")
-                        .field(&_0)
-                        .field(&_1)
-                        .finish(),
-                }
-            }
         }
     };
     #[allow(deprecated)]
@@ -193,22 +126,6 @@ pub mod pallet {
             T::AccountId: ::codec::Encode,
             T::AccountId: ::codec::Encode,
         {
-            fn encode_to<__CodecOutputEdqy: ::codec::Output + ?::core::marker::Sized>(
-                &self,
-                __codec_dest_edqy: &mut __CodecOutputEdqy,
-            ) {
-                match *self {
-                    Event::SomethingStored {
-                        ref something,
-                        ref who,
-                    } => {
-                        __codec_dest_edqy.push_byte(0usize as ::core::primitive::u8);
-                        ::codec::Encode::encode_to(something, __codec_dest_edqy);
-                        ::codec::Encode::encode_to(who, __codec_dest_edqy);
-                    }
-                    _ => (),
-                }
-            }
         }
         #[automatically_derived]
         impl<T: Config> ::codec::EncodeLike for Event<T>
@@ -226,50 +143,6 @@ pub mod pallet {
             T::AccountId: ::codec::Decode,
             T::AccountId: ::codec::Decode,
         {
-            fn decode<__CodecInputEdqy: ::codec::Input>(
-                __codec_input_edqy: &mut __CodecInputEdqy,
-            ) -> ::core::result::Result<Self, ::codec::Error> {
-                match __codec_input_edqy
-                    .read_byte()
-                    .map_err(|e| e.chain("Could not decode `Event`, failed to read variant byte"))?
-                {
-                    __codec_x_edqy if __codec_x_edqy == 0usize as ::core::primitive::u8 => {
-                        ::core::result::Result::Ok(Event::<T>::SomethingStored {
-                            something: {
-                                let __codec_res_edqy =
-                                    <u32 as ::codec::Decode>::decode(__codec_input_edqy);
-                                match __codec_res_edqy {
-                                    ::core::result::Result::Err(e) => {
-                                        return ::core::result::Result::Err(e.chain(
-                                            "Could not decode `Event::SomethingStored::something`",
-                                        ))
-                                    }
-                                    ::core::result::Result::Ok(__codec_res_edqy) => {
-                                        __codec_res_edqy
-                                    }
-                                }
-                            },
-                            who: {
-                                let __codec_res_edqy =
-                                    <T::AccountId as ::codec::Decode>::decode(__codec_input_edqy);
-                                match __codec_res_edqy {
-                                    ::core::result::Result::Err(e) => {
-                                        return ::core::result::Result::Err(e.chain(
-                                            "Could not decode `Event::SomethingStored::who`",
-                                        ))
-                                    }
-                                    ::core::result::Result::Ok(__codec_res_edqy) => {
-                                        __codec_res_edqy
-                                    }
-                                }
-                            },
-                        })
-                    }
-                    _ => ::core::result::Result::Err(<_ as ::core::convert::Into<_>>::into(
-                        "Could not decode `Event`, variant doesn't exist",
-                    )),
-                }
-            }
         }
     };
     #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -280,10 +153,6 @@ pub mod pallet {
             frame_support::sp_std::marker::PhantomData<(T)>: ::scale_info::TypeInfo + 'static,
             T: Config + 'static,
         {
-            type Identity = Self;
-            fn type_info() -> ::scale_info::Type {
-                :: scale_info :: Type :: builder () . path (:: scale_info :: Path :: new ("Event" , "pallet_template::pallet")) . type_params (< [_] > :: into_vec (# [rustc_box] :: alloc :: boxed :: Box :: new ([:: scale_info :: TypeParameter :: new ("T" , :: core :: option :: Option :: None)]))) . docs_always (& ["\n\t\t\tThe [event](https://docs.substrate.io/main-docs/build/events-errors/) emitted\n\t\t\tby this pallet.\n\t\t\t"]) . variant (:: scale_info :: build :: Variants :: new () . variant ("SomethingStored" , | v | v . index (0usize as :: core :: primitive :: u8) . fields (:: scale_info :: build :: Fields :: named () . field (| f | f . ty :: < u32 > () . name ("something") . type_name ("u32")) . field (| f | f . ty :: < T :: AccountId > () . name ("who") . type_name ("T::AccountId"))) . docs_always (& ["Event documentation should end with an array that provides descriptive names for event" , "parameters. [something, who]"])))
-            }
         };
     };
     #[scale_info(skip_type_params(T), capture_docs = "always")]
@@ -307,20 +176,6 @@ pub mod pallet {
     const _: () = {
         #[automatically_derived]
         impl<T> ::codec::Encode for Error<T> {
-            fn encode_to<__CodecOutputEdqy: ::codec::Output + ?::core::marker::Sized>(
-                &self,
-                __codec_dest_edqy: &mut __CodecOutputEdqy,
-            ) {
-                match *self {
-                    Error::NoneValue => {
-                        __codec_dest_edqy.push_byte(0usize as ::core::primitive::u8);
-                    }
-                    Error::StorageOverflow => {
-                        __codec_dest_edqy.push_byte(1usize as ::core::primitive::u8);
-                    }
-                    _ => (),
-                }
-            }
         }
         #[automatically_derived]
         impl<T> ::codec::EncodeLike for Error<T> {}
@@ -329,24 +184,6 @@ pub mod pallet {
     const _: () = {
         #[automatically_derived]
         impl<T> ::codec::Decode for Error<T> {
-            fn decode<__CodecInputEdqy: ::codec::Input>(
-                __codec_input_edqy: &mut __CodecInputEdqy,
-            ) -> ::core::result::Result<Self, ::codec::Error> {
-                match __codec_input_edqy
-                    .read_byte()
-                    .map_err(|e| e.chain("Could not decode `Error`, failed to read variant byte"))?
-                {
-                    __codec_x_edqy if __codec_x_edqy == 0usize as ::core::primitive::u8 => {
-                        ::core::result::Result::Ok(Error::<T>::NoneValue)
-                    }
-                    __codec_x_edqy if __codec_x_edqy == 1usize as ::core::primitive::u8 => {
-                        ::core::result::Result::Ok(Error::<T>::StorageOverflow)
-                    }
-                    _ => ::core::result::Result::Err(<_ as ::core::convert::Into<_>>::into(
-                        "Could not decode `Error`, variant doesn't exist",
-                    )),
-                }
-            }
         }
     };
     #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -356,10 +193,6 @@ pub mod pallet {
             frame_support::sp_std::marker::PhantomData<(T)>: ::scale_info::TypeInfo + 'static,
             T: 'static,
         {
-            type Identity = Self;
-            fn type_info() -> ::scale_info::Type {
-                :: scale_info :: Type :: builder () . path (:: scale_info :: Path :: new ("Error" , "pallet_template::pallet")) . type_params (< [_] > :: into_vec (# [rustc_box] :: alloc :: boxed :: Box :: new ([:: scale_info :: TypeParameter :: new ("T" , :: core :: option :: Option :: None)]))) . docs_always (& ["\n\t\t\tCustom [dispatch errors](https://docs.substrate.io/main-docs/build/events-errors/)\n\t\t\tof this pallet.\n\t\t\t"]) . variant (:: scale_info :: build :: Variants :: new () . variant ("NoneValue" , | v | v . index (0usize as :: core :: primitive :: u8) . docs_always (& ["Error names should be descriptive."])) . variant ("StorageOverflow" , | v | v . index (1usize as :: core :: primitive :: u8) . docs_always (& ["Errors should have helpful documentation associated with them."])))
-            }
         };
     };
     const _: () = {
@@ -536,35 +369,10 @@ pub mod pallet {
     }
     const _: () = {
         impl<T: Config> core::fmt::Debug for Call<T> {
-            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
-                match *self {
-                    Self::__Ignore(ref _0, ref _1) => fmt
-                        .debug_tuple("Call::__Ignore")
-                        .field(&_0)
-                        .field(&_1)
-                        .finish(),
-                    Self::do_something { ref something } => fmt
-                        .debug_struct("Call::do_something")
-                        .field("something", &something)
-                        .finish(),
-                    Self::cause_error {} => fmt.debug_struct("Call::cause_error").finish(),
-                }
-            }
         }
     };
     const _: () = {
         impl<T: Config> core::clone::Clone for Call<T> {
-            fn clone(&self) -> Self {
-                match self {
-                    Self::__Ignore(ref _0, ref _1) => {
-                        Self::__Ignore(core::clone::Clone::clone(_0), core::clone::Clone::clone(_1))
-                    }
-                    Self::do_something { ref something } => Self::do_something {
-                        something: core::clone::Clone::clone(something),
-                    },
-                    Self::cause_error {} => Self::cause_error {},
-                }
-            }
         }
     };
     const _: () = {
@@ -572,23 +380,6 @@ pub mod pallet {
     };
     const _: () = {
         impl<T: Config> core::cmp::PartialEq for Call<T> {
-            fn eq(&self, other: &Self) -> bool {
-                match (self, other) {
-                    (Self::__Ignore(_0, _1), Self::__Ignore(_0_other, _1_other)) => {
-                        true && _0 == _0_other && _1 == _1_other
-                    }
-                    (Self::do_something { something }, Self::do_something { something: _0 }) => {
-                        true && something == _0
-                    }
-                    (Self::cause_error {}, Self::cause_error {}) => true,
-                    (Self::__Ignore { .. }, Self::do_something { .. }) => false,
-                    (Self::__Ignore { .. }, Self::cause_error { .. }) => false,
-                    (Self::do_something { .. }, Self::__Ignore { .. }) => false,
-                    (Self::do_something { .. }, Self::cause_error { .. }) => false,
-                    (Self::cause_error { .. }, Self::__Ignore { .. }) => false,
-                    (Self::cause_error { .. }, Self::do_something { .. }) => false,
-                }
-            }
         }
     };
     #[allow(deprecated)]
@@ -596,21 +387,6 @@ pub mod pallet {
         #[allow(non_camel_case_types)]
         #[automatically_derived]
         impl<T: Config> ::codec::Encode for Call<T> {
-            fn encode_to<__CodecOutputEdqy: ::codec::Output + ?::core::marker::Sized>(
-                &self,
-                __codec_dest_edqy: &mut __CodecOutputEdqy,
-            ) {
-                match *self {
-                    Call::do_something { ref something } => {
-                        __codec_dest_edqy.push_byte(0u8 as ::core::primitive::u8);
-                        ::codec::Encode::encode_to(something, __codec_dest_edqy);
-                    }
-                    Call::cause_error {} => {
-                        __codec_dest_edqy.push_byte(1u8 as ::core::primitive::u8);
-                    }
-                    _ => (),
-                }
-            }
         }
         #[automatically_derived]
         impl<T: Config> ::codec::EncodeLike for Call<T> {}
@@ -620,39 +396,6 @@ pub mod pallet {
         #[allow(non_camel_case_types)]
         #[automatically_derived]
         impl<T: Config> ::codec::Decode for Call<T> {
-            fn decode<__CodecInputEdqy: ::codec::Input>(
-                __codec_input_edqy: &mut __CodecInputEdqy,
-            ) -> ::core::result::Result<Self, ::codec::Error> {
-                match __codec_input_edqy
-                    .read_byte()
-                    .map_err(|e| e.chain("Could not decode `Call`, failed to read variant byte"))?
-                {
-                    __codec_x_edqy if __codec_x_edqy == 0u8 as ::core::primitive::u8 => {
-                        ::core::result::Result::Ok(Call::<T>::do_something {
-                            something: {
-                                let __codec_res_edqy =
-                                    <u32 as ::codec::Decode>::decode(__codec_input_edqy);
-                                match __codec_res_edqy {
-                                    ::core::result::Result::Err(e) => {
-                                        return ::core::result::Result::Err(e.chain(
-                                            "Could not decode `Call::do_something::something`",
-                                        ))
-                                    }
-                                    ::core::result::Result::Ok(__codec_res_edqy) => {
-                                        __codec_res_edqy
-                                    }
-                                }
-                            },
-                        })
-                    }
-                    __codec_x_edqy if __codec_x_edqy == 1u8 as ::core::primitive::u8 => {
-                        ::core::result::Result::Ok(Call::<T>::cause_error {})
-                    }
-                    _ => ::core::result::Result::Err(<_ as ::core::convert::Into<_>>::into(
-                        "Could not decode `Call`, variant doesn't exist",
-                    )),
-                }
-            }
         }
     };
     #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
@@ -662,10 +405,6 @@ pub mod pallet {
             frame_support::sp_std::marker::PhantomData<(T,)>: ::scale_info::TypeInfo + 'static,
             T: Config + 'static,
         {
-            type Identity = Self;
-            fn type_info() -> ::scale_info::Type {
-                :: scale_info :: Type :: builder () . path (:: scale_info :: Path :: new ("Call" , "pallet_template::pallet")) . type_params (< [_] > :: into_vec (# [rustc_box] :: alloc :: boxed :: Box :: new ([:: scale_info :: TypeParameter :: new ("T" , :: core :: option :: Option :: None)]))) . docs_always (& ["Contains one variant per dispatchable that can be called by an extrinsic."]) . variant (:: scale_info :: build :: Variants :: new () . variant ("do_something" , | v | v . index (0u8 as :: core :: primitive :: u8) . fields (:: scale_info :: build :: Fields :: named () . field (| f | f . ty :: < u32 > () . name ("something") . type_name ("u32"))) . docs_always (& ["An example dispatchable that takes a singles value as a parameter, writes the value to" , "storage and emits an event. This function must be dispatched by a signed extrinsic."])) . variant ("cause_error" , | v | v . index (1u8 as :: core :: primitive :: u8) . fields (:: scale_info :: build :: Fields :: named ()) . docs_always (& ["An example dispatchable that may throw a custom error."])))
-            }
         };
     };
     impl<T: Config> Call<T> {

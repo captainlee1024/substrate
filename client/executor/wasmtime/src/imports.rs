@@ -57,7 +57,7 @@ where
 			)))
 		}
 
-		// 目前可导入的类型只有function
+		// 只导入function
 		match import_ty.ty() {
 			ExternType::Func(func_ty) => {
 				// 如果是function insert到pending map
