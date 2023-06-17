@@ -3226,6 +3226,22 @@ pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
+/// offchain worker在block import时同时进行执行, 前面调用流程和apply_extrinsic流程一样
+/// 在公共的dispatch方法里调用Runtime的offchain worker实现
+/// 该实现时对runtime api的实现
+/// sp_offchain::runtime_decl_for_offchain_worker_api::OffchainWorkerApi
+/// 在该方法里调用了Executive的方法
+/// Executive一次执行了所有pallet的offchain_worker
+///
+/// 其中Executive的AllPalletsWithSystem是在这里注入的,
+/// executive使用这里的AllPalletsWithSystem一次调用元组内所有元素的offchain_worker方法
+/// #[cfg_attr(feature = "tuples-128", impl_for_tuples(128))]
+/// 在pub trait OffchainWorker<BlockNumber> 的trait上有该宏, 该宏会给AllPalletsWithSystem元组结构体实现
+/// 该trait, 最终会调用到各个pallet里的offchain_worker方法
+/// 所以在executive中调用AllPallet中调用offchain_worker就可以了
+/// Executive: handles dispatch to the various modules.
+/// 其他的hooks方法也类似, 都使用了该宏进行拓展然后通过AllPallet调用
+/// 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
 	Runtime,

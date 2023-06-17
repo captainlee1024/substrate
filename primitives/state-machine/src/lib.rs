@@ -326,7 +326,6 @@ mod execution {
 	{
 		fn drop(&mut self) {
 			self.backend.register_overlay_stats(&self.stats);
-			self.backend
 		}
 	}
 

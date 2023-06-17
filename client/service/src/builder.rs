@@ -358,6 +358,44 @@ pub struct SpawnTasksParams<'a, TBl: BlockT, TCl, TExPool, TRpc, Backend> {
 	pub telemetry: Option<&'a mut Telemetry>,
 }
 
+/// Build a shared offchain workers instance.
+///
+/// 启动一个实例, 专门用来处理offchain worker相关工作
+/// 比如当每个块import的时候去异步调用pallet的offchain worker
+/* TODO: 重构掉了？
+pub fn build_offchain_workers<TBl, TCl>(
+	config: &Configuration,
+	spawn_handle: SpawnTaskHandle,
+	client: Arc<TCl>,
+	network: Arc<dyn sc_offchain::NetworkProvider + Send + Sync>,
+) -> Option<Arc<sc_offchain::OffchainWorkers<TCl, TBl>>>
+where
+	TBl: BlockT,
+	TCl: Send + Sync + ProvideRuntimeApi<TBl> + BlockchainEvents<TBl> + 'static,
+	<TCl as ProvideRuntimeApi<TBl>>::Api: sc_offchain::OffchainWorkerApi<TBl>,
+{
+	let offchain_workers = Some(Arc::new(sc_offchain::OffchainWorkers::new(client.clone())));
+
+	// Inform the offchain worker about new imported blocks
+	if let Some(offchain) = offchain_workers.clone() {
+		spawn_handle.spawn(
+			"offchain-notifications",
+			Some("offchain-worker"),
+			sc_offchain::notification_future(
+				config.role.is_authority(),
+				client,
+				offchain,
+				Clone::clone(&spawn_handle),
+				network,
+			),
+		);
+	}
+
+	offchain_workers
+}
+
+ */
+
 /// Spawn the tasks that are required to run a node.
 pub fn spawn_tasks<TBl, TBackend, TExPool, TRpc, TCl>(
 	params: SpawnTasksParams<TBl, TCl, TExPool, TRpc, TBackend>,
