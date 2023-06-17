@@ -112,6 +112,7 @@ where
 	Client::Api: OffchainWorkerApi<Block>,
 {
 	/// Start the offchain workers after given block.
+	/// 开始触发指定块的offchain worker
 	#[must_use]
 	pub fn on_block_imported(
 		&self,
@@ -161,6 +162,11 @@ where
 
 				let context = ExecutionContext::OffchainCall(Some((api, capabilities)));
 				let run = if version == 2 {
+					// 这里开始调用runtime api 提供的offchain worker相关的接口
+					// 在这里会经过一系列的包装函数到call_at_api到dispatch再到runtime 的 offchain_worker
+					// 最终到executive的offchain_worker里, executive持有一个AllPalletWithSystem
+					// 这个元组结构体持有所有的pallet, 而#[cfg_attr(feature = "tuples-128", impl_for_tuples(128))]
+					// 宏会拓展offchain_worker trait给该元组, 从而可以依次调用元组内结构体的offchain worker的具体实现
 					runtime.offchain_worker_with_context(hash, context, &header)
 				} else {
 					#[allow(deprecated)]

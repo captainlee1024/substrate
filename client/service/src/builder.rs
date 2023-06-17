@@ -369,6 +369,9 @@ pub struct SpawnTasksParams<'a, TBl: BlockT, TCl, TExPool, TRpc, Backend> {
 }
 
 /// Build a shared offchain workers instance.
+/// 
+/// 启动一个实例, 专门用来处理offchain worker相关工作
+/// 比如当每个块import的时候去异步调用pallet的offchain worker
 pub fn build_offchain_workers<TBl, TCl>(
 	config: &Configuration,
 	spawn_handle: SpawnTaskHandle,
