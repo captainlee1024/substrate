@@ -33,6 +33,7 @@ pub mod testing;
 /// Persistent storage prefix used by the Offchain Worker API when creating a DB key.
 pub const STORAGE_PREFIX: &[u8] = b"storage";
 
+/// 提供了直接操作数据库的基本操作, offchain worker的 DBExternalities是对该接口的封装
 /// Offchain DB persistent (non-fork-aware) storage.
 pub trait OffchainStorage: Clone + Send + Sync {
 	/// Persist a value in storage under given key and prefix.
@@ -610,6 +611,15 @@ sp_externalities::decl_extension! {
 	pub struct OffchainWorkerExt(Box<dyn Externalities>);
 }
 
+/// io:
+/// - 对runtime层, io中提供了一套网络接口给runtime 以便访问外界服务
+/// - 对client侧, io中的http网络接口实现依靠的就是该externalities，
+/// io只是一层封装, 给runtime 封装了一套运行在client侧的api, 比如这里的OffchainWorkerExt，DbExternalities
+/// 我们可以在写runtime中的hooks offchain worker时候直接使用http, local_storage_set local_storage_clear等
+/// 我们在runtime调用的时候实际上是调用的io封装提供给runtime使用的
+/// 这里的接口是提供给io用的, io在真正执行的时候会调用OffchainWorkerExt, DbExternalities的实例去执行
+///
+/// 诸如此类的Externalities的extensions在 client/api/execution_extensions里注册
 #[cfg(feature = "std")]
 impl OffchainWorkerExt {
 	/// Create a new instance of `Self`.
@@ -618,6 +628,9 @@ impl OffchainWorkerExt {
 	}
 }
 
+/// offchain worker的DbExternalities, 是对数据库基本操作的封装
+/// 是对OffchainStorage的封装, OffchainStorage提供了一些基本接口
+/// 直接对数据库进行操作的
 /// A externalities extension for accessing the Offchain DB.
 pub trait DbExternalities: Send {
 	/// Sets a value in the local storage.
@@ -710,6 +723,17 @@ impl<T: DbExternalities> DbExternalities for LimitedExternalities<T> {
 	}
 }
 
+/// io:
+/// - 对runtime层, io中提供了local_storage_clear_version_1等方法给runtime使用
+/// - 对client侧, io中的local_storage_clear_version_1实现依靠的就是该externalities，
+/// io只是一层封装, 给runtime 封装了一套运行在client侧的api, 比如这里的DbExternalities
+/// 我们可以在写runtime中的hooks offchain worker时候直接使用local_storage_set local_storage_clear等
+/// 我们在runtime调用的时候实际上是调用的io封装提供给runtime使用的
+/// 这里的接口是提供给io用的, io在真正执行的时候会调用DbExternalities的实例去执行
+/// DbExternalities是对OffchainStorage的封装, OffchainStorage则是直接对Db进行操作
+/// 如set get remove等数据库操作
+/// 
+/// 诸如此类的Externalities的extensions在 client/api/execution_extensions里注册
 #[cfg(feature = "std")]
 sp_externalities::decl_extension! {
 	/// The offchain database extension that will be registered at the Substrate externalities.

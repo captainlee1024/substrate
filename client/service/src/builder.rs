@@ -184,6 +184,10 @@ where
 
 	let client = {
 		let extensions = sc_client_api::execution_extensions::ExecutionExtensions::new(
+			// config.execution_strategies.clone(),
+			// Some(keystore_container.keystore()),
+			// // 在这里创建 offchain storage 的DB
+			// sc_offchain::OffchainDb::factory_from_backend(&*backend),
 			None,
 			Arc::new(executor.clone()),
 		);
