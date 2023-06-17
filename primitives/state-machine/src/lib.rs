@@ -501,6 +501,16 @@ mod execution {
 				.enter_runtime()
 				.expect("StateMachine is never called from the runtime; qed");
 
+			// 这些extensions在client的call_executor里就注册好了，包含了拓展extensions,比如
+			// 		OffchainWorkerExt来给sp_io提供offchain worker网络接口的实现
+			// 		DbExternalities 来给sp_io提供访问offchain storage的能力,
+			//
+			// 有了这些额外的extensions和overlay(对于StateMachine来数的基础extensions也就是storageExtensions)
+			// 就能在statemachine执行的时候创建出所需要的Externalities
+			// 对于Substrate来说, Externalities至少要包含一个最基本的extensions--StorageExtensions
+			// 其他的都是拓展，这里extensions就是拓展, statemachine的overlay就是StorageExtensions
+			// externalities会在primitives/state-machine/src/lib.rs 里 execute_aux方法里进行初始化
+			// 然后就开始执行具体的extrinsic了
 			let mut ext = Ext::new(self.overlay, cache, self.backend, Some(&mut self.extensions));
 
 			let ext_id = ext.id;

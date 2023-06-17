@@ -161,6 +161,8 @@ where
 		&self.execution_extensions
 	}
 
+	// offchain worker使用的extensions是如何注册的
+	// 包括两个一个用于访问DB的一个用于访问网络的
 	fn call(
 		&self,
 		at_hash: Block::Hash,
@@ -190,12 +192,22 @@ where
 
 		let runtime_code = self.check_override(runtime_code, &state, at_hash)?.0;
 
+		// 在执行之前注册各个extensions, 比如OffchainWorkerExt来给sp_io提供offchain worker网络接口的实现
+		// DbExternalities 来给sp_io提供访问offchain storage的能力, 比如local_storage_set
+		// 由io提供给runtime, DbExternalities真正实现
+		// 有了基本的extensions和这些拓展的extensions就能去执行extrinsic了
 		let extensions = self.execution_extensions.extensions(
 			at_hash,
 			at_number,
 			ExecutionContext::OffchainCall(None),
 		);
 
+		// 有了这些额外的extensions和overlay(对于StateMachine来数的基础extensions也就是storageExtensions)
+		// 就能在statemachine执行的时候创建出所需要的Externalities
+		// 对于Substrate来说, Externalities至少要包含一个最基本的extensions--StorageExtensions
+		// 其他的都是拓展，这里extensions就是拓展, statemachine的overlay就是StorageExtensions
+		// externalities会在primitives/state-machine/src/lib.rs 里 execute_aux方法里进行初始化
+		// 然后就开始执行具体的extrinsic了
 		let mut sm = StateMachine::new(
 			&state,
 			&mut changes,

@@ -1,3 +1,6 @@
+//! 在IO中使用proc_macro_runtime_interface::with_externalities去调用真正实现的方法都不是以extensions的方式拓展的
+//! 以self.extension::<OffchainDbExt>方式调用的方法都是在client/api/arc/execution_extensions里拓展注册的extensions
+
 #![feature(prelude_import)]
 //! I/O host interface for substrate runtime.
 #![warn(missing_docs)]

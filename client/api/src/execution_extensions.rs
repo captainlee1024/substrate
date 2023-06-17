@@ -225,6 +225,7 @@ impl<Block: BlockT> ExecutionExtensions<Block> {
 
 	/// Based on the execution context and capabilities it produces
 	/// the extensions object to support desired set of APIs.
+	/// 各extensions在这里注册
 	pub fn extensions(
 		&self,
 		block_hash: Block::Hash,
