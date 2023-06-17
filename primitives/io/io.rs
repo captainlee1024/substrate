@@ -9522,6 +9522,8 @@ pub mod transaction_index {
         }
     }
 }
+
+/// offchain_index state-machine实现了相关功能
 /// Interface that provides functions to access the Offchain DB.
 pub mod offchain_index {
     use super::*;
