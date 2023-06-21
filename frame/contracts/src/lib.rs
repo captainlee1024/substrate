@@ -305,6 +305,11 @@ pub mod pallet {
 		///
 		/// This setting along with [`MaxCodeLen`](#associatedtype.MaxCodeLen) directly affects
 		/// memory usage of your runtime.
+		/// 
+		/// 调用堆栈的类型决定了合约调用的最大嵌套深度。
+		/// 允许的深度为 CallStack::size() + 1。因此，大小 0 意味着合约不能使用调用或实例化。
+		/// 换句话说，只有称为“根合约”的源才被允许执行。
+		/// 此设置以及 MaxCodeLen 直接影响运行时的内存使用情况
 		type CallStack: Array<Item = Frame<Self>>;
 
 		/// The amount of balance a caller has to pay for each byte of storage.
@@ -1476,6 +1481,13 @@ impl<T: Config> Pallet<T> {
 	///
 	/// If `collect_events` is set to `CollectEvents::UnsafeCollect` it collects all the Events
 	/// emitted in the block so far.
+	///
+	/// 实例化新合约。
+	/// 这个函数类似于 Self::instantiate，但不执行任何地址查找，更适合直接从 Rust 调用。
+	/// 它返回执行结果、账户 ID 和已用权重量。
+	/// 注意
+	/// 如果设置为 DebugInfo::UnsafeDebug ，则debug返回其他人类可读的调试信息。
+	/// 如果设置为 CollectEvents::UnsafeCollect ，则collect_events收集到目前为止块中发出的所有事件
 	pub fn bare_instantiate(
 		origin: T::AccountId,
 		value: BalanceOf<T>,
@@ -1688,6 +1700,7 @@ sp_api::decl_runtime_apis! {
 		/// Instantiate a new contract.
 		///
 		/// See `[crate::Pallet::bare_instantiate]`.
+		/// 实例化一个新的contract, 是对bare_instantiate的封装
 		fn instantiate(
 			origin: AccountId,
 			value: Balance,

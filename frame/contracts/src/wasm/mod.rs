@@ -55,6 +55,13 @@ const BYTES_PER_PAGE: usize = 64 * 1024;
 
 /// Validated Wasm module ready for execution.
 /// This data structure is immutable once created and stored.
+///
+///
+/// 准备好执行的wasm模块。
+/// 注意
+/// 此数据结构在创建和存储后大多是不可变的。可以通过调用协定来更改的例外是 instruction_weights_version 和 code。
+/// 和code在调用具有过时检测的协定时更改。
+/// instruction_weights_version因此，在调用合约时，在保存这种类型的任何内存中表示时必须小心，因为这些字段可能会过时。
 #[derive(Encode, Decode, scale_info::TypeInfo)]
 #[codec(mel_bound())]
 #[scale_info(skip_type_params(T))]
@@ -172,6 +179,11 @@ impl<T: Config> WasmBlob<T> {
 	/// This is either used for later executing a contract or for validation of a contract.
 	/// When validating we pass `()` as `host_state`. Please note that such a dummy instance must
 	/// **never** be called/executed, since it will panic the executor.
+	/// 创建并返回所提供代码的实例。
+	/// 这要么用于以后执行合同，要么用于合同的验证。
+	/// 验证时，我们传递 () 为 host_state.请注意，这样的虚拟 实例绝不能 被调用/执行，因为它会使执行者恐慌
+	/// 这是最底层的instantiate Evn的注册函数 -> Runtime 的instantiate -> Ext的 instantiate -> stack instantiate -> 这里的instantiate
+	/// 这里会初始化一个合约wasm实例
 	pub fn instantiate<E, H>(
 		code: &[u8],
 		host_state: H,
@@ -186,6 +198,25 @@ impl<T: Config> WasmBlob<T> {
 		let contract = LoadedModule::new::<T>(&code, determinism, Some(stack_limits))?;
 		let mut store = Store::new(&contract.engine, host_state);
 		let mut linker = Linker::new(&contract.engine);
+        /*重构之前
+        		let mut config = WasmiConfig::default();
+		config
+			.set_stack_limits(stack_limits)
+			.wasm_multi_value(false)
+			.wasm_mutable_global(false)
+			.wasm_sign_extension(false)
+			.wasm_saturating_float_to_int(false);
+		// 根据配置实例化一个engine
+		let engine = Engine::new(&config);
+		// 根据配置实例化contract wasm module
+		let module = Module::new(&engine, code)?;
+		// 根据Runtime 和 Engine 实例化store
+		let mut store = Store::new(&engine, host_state);
+		// 根据Engine实例化Linker
+		let mut linker = Linker::new(&engine);
+		// link 所有的 host function
+
+         */
 		E::define(
 			&mut store,
 			&mut linker,
@@ -210,17 +241,20 @@ impl<T: Config> WasmBlob<T> {
 			MemoryType::new(memory_limits.0, Some(memory_limits.1)).expect(qed),
 		)
 		.expect(qed);
+		// link memory
 
 		linker
 			.define("env", "memory", memory)
 			.expect("We just created the Linker. It has no definitions with this name; qed");
 
+		// 根据linker 和 contract module 实例化一个合于instance
 		let instance = linker
 			.instantiate(&mut store, &contract.module)
 			.map_err(|_| "can't instantiate module with provided definitions")?
 			.ensure_no_start(&mut store)
 			.map_err(|_| "start function is forbidden but found in the module")?;
 
+		// 返回store memory instance
 		Ok((store, memory, instance))
 	}
 
@@ -379,6 +413,7 @@ impl<T: Config> Executable<T> for WasmBlob<T> {
 		// Instantiate the Wasm module to the engine.
 		let runtime = Runtime::new(ext, input_data);
 		let schedule = <T>::Schedule::get();
+        		// 实例化instance
 		let (mut store, memory, instance) = Self::instantiate::<crate::wasm::runtime::Env, _>(
 			code,
 			runtime,
@@ -410,6 +445,7 @@ impl<T: Config> Executable<T> for WasmBlob<T> {
 			.add_fuel(fuel_limit)
 			.expect("We've set up engine to fuel consuming mode; qed");
 
+		// Host Function和Contract Function都是export
 		let exported_func = instance
 			.get_export(&store, function.identifier())
 			.and_then(|export| export.into_func())

@@ -16,6 +16,7 @@
 // limitations under the License.
 
 //! Environment definition of the wasm smart-contract runtime.
+//! wasm 智能合约运行时的环境定义。
 
 use crate::{
 	exec::{ExecError, ExecResult, Ext, Key, TopicOf},
@@ -58,9 +59,11 @@ pub enum AllowUnstableInterface {
 
 /// Trait implemented by the [`define_env`](pallet_contracts_proc_macro::define_env) macro for the
 /// emitted `Env` struct.
+/// 将host function 注册到linker中以便合约执行的时候导入到合约module中
 pub trait Environment<HostState> {
 	/// Adds all declared functions to the supplied [`Linker`](wasmi::Linker) and
 	/// [`Store`](wasmi::Store).
+	/// 将所有声明的函数添加到提供的 Linker 和 Store中
 	fn define(
 		store: &mut Store<HostState>,
 		linker: &mut Linker<HostState>,
@@ -563,6 +566,9 @@ impl<'a, E: Ext + 'a> Runtime<'a, E> {
 	/// Returns `Err` if one of the following conditions occurs:
 	///
 	/// - requested buffer is not within the bounds of the sandbox memory.
+	/// 从沙盒内存中读取指定的区块。
+	/// 如果出现下列情况之一，则返回 Err ：
+	/// 请求的缓冲区不在沙盒内存的范围内
 	pub fn read_sandbox_memory(
 		&self,
 		memory: &[u8],
@@ -950,6 +956,8 @@ impl<'a, E: Ext + 'a> Runtime<'a, E> {
 		Ok(Runtime::<E>::exec_into_return_code(call_outcome)?)
 	}
 
+	// runtime 的实现依赖Ext trait的instantiate
+	// Stack实现了Ext
 	fn instantiate(
 		&mut self,
 		memory: &mut [u8],
@@ -981,6 +989,8 @@ impl<'a, E: Ext + 'a> Runtime<'a, E> {
 		let input_data = self.read_sandbox_memory(memory, input_data_ptr, input_data_len)?;
 		let salt = self.read_sandbox_memory(memory, salt_ptr, salt_len)?;
 		let instantiate_outcome =
+		// 这边整理好所有的参数(内存中的参数数据读取到rust数据结构里)
+		// 开始执行
 			self.ext.instantiate(weight, deposit_limit, code_hash, value, input_data, &salt);
 		if let Ok((address, output)) = &instantiate_outcome {
 			if !output.flags.contains(ReturnFlags::REVERT) {
@@ -1021,6 +1031,9 @@ impl<'a, E: Ext + 'a> Runtime<'a, E> {
 // Any input that leads to a out of bound error (reading or writing) or failing to decode
 // data passed to the supervisor will lead to a trap. This is not documented explicitly
 // for every function.
+// 这是向合约公开的 API。注意 任何导致越界错误（读取或写入）
+// 或无法解码传递给主管的数据的输入都将导致陷阱。这并非为每个函数明确记录。
+// 即提供给ink的sys的host function, 在ink 中直接import导入调用
 #[define_env(doc)]
 pub mod env {
 	/// Set the value at the given key in the contract storage.
@@ -1540,6 +1553,44 @@ pub mod env {
 	/// Equivalent to the newer [`seal2`][`super::api_doc::Version2::instantiate`] version but works
 	/// with *ref_time* Weight only. It is recommended to switch to the latest version, once it's
 	/// stabilized.
+	///
+	/// version(1)将生成在seal1 module下的instantiate
+	///
+	/// 在旧版pallet_contracts中，所有主机函数都必须使用 seal_ 前缀命名是一种命名约定。为了向后兼容，
+	/// 每个主机函数现在都可以通过属性标记 #[prefixed_alias] 来生成这样一个前缀命名的别名函数
+	///
+	/// 所以这里也会生成一份seal_instantiate的函数在seal1 module中
+	/// 在ink!的on_chain的ext的wasm32实现里的instantiate就是导入的该方法
+	/// 所以在ink!的build_create创建的builder里准备好各种参数之后会调用CreateBuilder的instantiate方法
+	/// 往下调用CreateParams的instantiate方法, 在该方法里调用env的api instantiate_contract方法
+	/// 这是一个low-level的方法(CreateBuilder的instantiate方法就是该方法的high-level的包装方法)
+	/// 在该方法里会初始化on_chain的environment实例 EnvInstance(如果是测试的化这里会初始化off-chain的environment实例
+	/// 该environment提供了pallet-contract的部分方法用于测试,不过跨合约调用好像还不支持)
+	/// 然后调用EnvInstance的instantiate_contract方法, 在该方法里设置好在ink中准备的调用参数, 并且转换成在
+	/// Host Function即这里可以访问的格式
+	/// 然后调用on_chain的ext的instantiate方法,该方法就是import的这里的这个host function, 该方法在ink中的定义如下
+	///     #[link(wasm_import_module = "seal1")]
+	///     extern "C" {
+	///         pub fn instantiate(
+	///             init_code_ptr: Ptr32<[u8]>,
+	///             gas: u64,
+	///             endowment_ptr: Ptr32<[u8]>,
+	///             input_ptr: Ptr32<[u8]>,
+	///             input_len: u32,
+	///             address_ptr: Ptr32Mut<[u8]>,
+	///             address_len_ptr: Ptr32Mut<u32>,
+	///             output_ptr: Ptr32Mut<[u8]>,
+	///             output_len_ptr: Ptr32Mut<u32>,
+	///             salt_ptr: Ptr32<[u8]>,
+	///             salt_len: u32,
+	///         ) -> ReturnCode;
+	///
+	/// 注意, 这里的这个外层函数并不是host function
+	/// 它更像是一层wrap, 用来提供module名称和过度一些参数的
+	/// 真正注册的HostFunction是里面的ctx instantiate
+	/// 它的参数和ink!里的一样, 并且linker里define的host function就是把里面的
+	/// ctx.instantiate包进去了, ctx.instantiate的实现在上面Runtime里实现了
+	/// 也就是上面Runtime里的方法是Host Function
 	#[version(1)]
 	#[prefixed_alias]
 	fn instantiate(
@@ -2503,6 +2554,12 @@ pub mod env {
 	///
 	/// If no chain extension exists the contract will trap with the `NoChainExtension`
 	/// module error.
+	///
+	///
+	/// 调用链提供的链扩展（如果有）。
+	/// 输入值的处理取决于特定的链扩展，返回值也是如此。扩展可以通过将它们解释为指针来决定将输入用作基元输入或 in/out 参数。因此，此函数的任何调用方都必须与其目标链协调。
+	/// 注意
+	/// 如果不存在链扩展，则合约将因模块错误而 NoChainExtension 捕获
 	#[prefixed_alias]
 	fn call_chain_extension(
 		ctx: _,

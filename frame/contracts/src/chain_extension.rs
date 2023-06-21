@@ -97,6 +97,14 @@ pub type Result<T> = sp_std::result::Result<T, DispatchError>;
 /// The extension will be [`Default`] initialized at the beginning of each call
 /// (**not** per call stack) and dropped afterwards. Hence any value held inside the extension
 /// can be used as a per-call scratch buffer.
+///
+///
+/// 用于扩展协定可调用函数集的特征。
+/// 为了创建自定义链扩展，必须实现此特征并将其作为同名的关联类型提供给托盘合同配置特征。
+/// 有关链扩展的一般说明，请参阅 模块文档 。
+/// LifeTime
+/// 扩展将在 Default 每次调用开始时初始化（而不是 每个调用堆栈），然后删除。
+/// 因此，扩展中保存的任何值都可以用作每次调用的暂存缓冲区。
 pub trait ChainExtension<C: Config> {
 	/// Call the chain extension logic.
 	///
@@ -418,6 +426,10 @@ impl<'a, 'b, E: Ext, S: BufOut> Environment<'a, 'b, E, S> {
 /// All data is put into this struct to easily pass it around as part of the typestate
 /// pattern. Also it creates the opportunity to box this struct in the future in case it
 /// gets too large.
+///
+/// 实际的 Environment数据。
+/// 所有数据都放入此结构中，以便将其作为类型状态模式的一部分轻松传递。
+/// 此外，它还创造了将来将此结构框起来的机会，以防它变得太大
 struct Inner<'a, 'b, E: Ext> {
 	/// The runtime contains all necessary functions to interact with the running contract.
 	runtime: &'a mut Runtime<'b, E>,

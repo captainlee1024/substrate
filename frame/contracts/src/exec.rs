@@ -134,6 +134,11 @@ impl<T: Into<DispatchError>> From<T> for ExecError {
 /// # Note
 ///
 /// This trait is sealed and cannot be implemented by downstream crates.
+///
+/// 提供对执行智能合约的外部环境的访问的接口。
+/// 此接口专用于执行代码的帐户，因此所有操作都隐式执行在该帐户上。
+/// 注意
+/// 这种特性是密封的，不能通过下游板条箱来实现。
 pub trait Ext: sealing::Sealed {
 	type T: Config;
 
@@ -348,6 +353,7 @@ pub trait Ext: sealing::Sealed {
 }
 
 /// Describes the different functions that can be exported by an [`Executable`].
+/// 描述可由[Executable]导出的不同的function
 #[derive(
 	Copy,
 	Clone,
@@ -361,8 +367,10 @@ pub trait Ext: sealing::Sealed {
 )]
 pub enum ExportedFunction {
 	/// The constructor function which is executed on deployment of a contract.
+	/// 在部署合约时执行的构造函数。
 	Constructor,
 	/// The function which is executed when a contract is called.
+	/// 调用合约时执行的函数。
 	Call,
 }
 
@@ -370,6 +378,9 @@ pub enum ExportedFunction {
 ///
 /// In the on-chain environment this would be represented by a wasm module. This trait exists in
 /// order to be able to mock the wasm logic for testing.
+///
+/// 表示可以执行的内容的特征。
+/// 在链上环境中，这将由 wasm 模块表示。存在此特征是为了能够模拟wasm逻辑进行测试
 pub trait Executable<T: Config>: Sized {
 	/// Load the executable from storage.
 	///
@@ -405,6 +416,10 @@ pub trait Executable<T: Config>: Sized {
 	///
 	/// This functions expects to be executed in a storage transaction that rolls back
 	/// all of its emitted storage changes.
+	/// 执行指定的导出函数并返回结果。
+	/// 当指定的函数是 Constructor 可执行文件时，将存储可执行文件并增加其引用计数。
+	/// 注意
+	/// 此函数期望在回滚其发出的所有存储更改的存储事务中执行
 	fn execute<E: Ext<T = T>>(
 		self,
 		ext: &mut E,
@@ -430,6 +445,9 @@ pub trait Executable<T: Config>: Sized {
 /// The call stack is initiated by either a signed origin or one of the contract RPC calls.
 /// This type implements `Ext` and by that exposes the business logic of contract execution to
 /// the runtime module which interfaces with the contract (the wasm blob) itself.
+/// 合约执行的完整调用堆栈。
+/// 调用堆栈由已签名的源或协定 RPC 调用之一启动。
+/// 此类型实现 Ext 并通过它向运行时模块公开合约执行的业务逻辑，该运行时模块与合约（wasm blob）本身接口。
 pub struct Stack<'a, T: Config, E> {
 	/// The origin that initiated the call stack. It could either be a Signed plain account that
 	/// holds an account id or Root.
@@ -456,6 +474,7 @@ pub struct Stack<'a, T: Config, E> {
 	nonce: Option<u64>,
 	/// The actual call stack. One entry per nested contract called/instantiated.
 	/// This does **not** include the [`Self::first_frame`].
+	/// 实际调用堆栈。每个嵌套协定调用/实例化一个条目。这 不包括 Self::first_frame.
 	frames: SmallVec<T::CallStack>,
 	/// Statically guarantee that each call stack has at least one frame.
 	first_frame: Frame<T>,
@@ -479,14 +498,21 @@ pub struct Stack<'a, T: Config, E> {
 ///
 /// This is an internal data structure. It is exposed to the public for the sole reason
 /// of specifying [`Config::CallStack`].
+///
+/// 表示调用堆栈中的一个条目。
+/// 对于每个嵌套合约调用或实例化，将创建一个帧。它保存所述调用的特定信息并缓存存储中的数据 ContractInfo 结构。
+/// 注意
+/// 这是一个内部数据结构。它向公众公开的唯一原因是指定 Config::CallStack.
 pub struct Frame<T: Config> {
 	/// The account id of the executing contract.
 	account_id: T::AccountId,
 	/// The cached in-storage data of the contract.
+	/// 合约的缓存存储数据。
 	contract_info: CachedContract<T>,
 	/// The amount of balance transferred by the caller as part of the call.
 	value_transferred: BalanceOf<T>,
 	/// Determines whether this is a call or instantiate frame.
+	/// 确定这是调用帧还是实例化帧。
 	entry_point: ExportedFunction,
 	/// The gas meter capped to the supplied gas limit.
 	nested_gas: GasMeter<T>,
@@ -509,6 +535,8 @@ struct DelegatedCall<T: Config, E> {
 /// Parameter passed in when creating a new `Frame`.
 ///
 /// It determines whether the new frame is for a call or an instantiate.
+/// 创建新的 Frame.
+/// 它确定新帧是用于调用还是实例化。
 enum FrameArgs<'a, T: Config, E> {
 	Call {
 		/// The account id of the contract that is to be called.
@@ -526,6 +554,7 @@ enum FrameArgs<'a, T: Config, E> {
 		/// The nonce that should be used to derive a new trie id for the contract.
 		nonce: u64,
 		/// The executable whose `deploy` function is run.
+		/// 运行其“部署”功能的可执行文件。
 		executable: E,
 		/// A salt used in the contract address deriviation of the new contract.
 		salt: &'a [u8],
@@ -799,6 +828,7 @@ where
 
 					(dest, contract, executable, delegate_caller, ExportedFunction::Call, None)
 				},
+				// 如果是实例化合约
 				FrameArgs::Instantiate { sender, nonce, executable, salt, input_data } => {
 					let account_id = Contracts::<T>::contract_address(
 						&sender,
@@ -857,6 +887,9 @@ where
 		// See the `in_memory_changes_not_discarded` test for more information.
 		// We do not store on instantiate because we do not allow to call into a contract
 		// from its own constructor.
+		// 我们需要确保对合同信息所做的更改不会被丢弃。
+		// 有关详细信息，请参阅“in_memory_changes_not_discarded”测试。
+		// 我们不存储在实例化上，因为我们不允许从它自己的构造函数调用合约。
 		let frame = self.top_frame();
 		if let (CachedContract::Cached(contract), ExportedFunction::Call) =
 			(&frame.contract_info, frame.entry_point)
@@ -883,6 +916,8 @@ where
 	/// Run the current (top) frame.
 	///
 	/// This can be either a call or an instantiate.
+	///
+	/// 运行当前（顶部）帧。这可以是调用或实例化。
 	fn run(&mut self, executable: E, input_data: Vec<u8>) -> Result<ExecReturnValue, ExecError> {
 		let frame = self.top_frame();
 		let entry_point = frame.entry_point;
@@ -891,6 +926,7 @@ where
 		let do_transaction = || {
 			// We need to charge the storage deposit before the initial transfer so that
 			// it can create the account in case the initial transfer is < ed.
+			// 我们需要在初始转账之前收取存储押金，以便在初始转账<时可以创建帐户。
 			if entry_point == ExportedFunction::Constructor {
 				// Root origin can't be used to instantiate a contract, so it is safe to assume that
 				// if we reached this point the origin has an associated account.
@@ -905,12 +941,14 @@ where
 			}
 
 			// Every non delegate call or instantiate also optionally transfers the balance.
+			// 每个非委托调用或实例化也可以选择转移余额。
 			self.initial_transfer()?;
 
 			let call_span =
 				T::Debug::new_call_span(executable.code_hash(), entry_point, &input_data);
 
 			// Call into the Wasm blob.
+			// 开始执行构造函数
 			let output = executable
 				.execute(self, &entry_point, input_data)
 				.map_err(|e| ExecError { error: e.error, origin: ErrorOrigin::Callee })?;
@@ -1247,6 +1285,7 @@ where
 		self.run(executable, input_data)
 	}
 
+	/// instantiate Evn的注册函数 -> Runtime 的instantiate -> Ext的 instantiate -> stack instantiate -> 这里的instantiate
 	fn instantiate(
 		&mut self,
 		gas_limit: Weight,
@@ -1258,6 +1297,9 @@ where
 	) -> Result<(AccountIdOf<T>, ExecReturnValue), ExecError> {
 		let executable = E::from_storage(code_hash, self.gas_meter_mut())?;
 		let nonce = self.next_nonce();
+		// push 一个帧到栈
+		// 创建后续嵌套栈帧
+		// 帧有两种类型Call, Instantiate 调用合约还是实例化合约
 		let executable = self.push_frame(
 			FrameArgs::Instantiate {
 				sender: self.top_frame().account_id.clone(),
@@ -1270,7 +1312,9 @@ where
 			gas_limit,
 			deposit_limit,
 		)?;
+		// 获取合约AccountId
 		let account_id = self.top_frame().account_id.clone();
+		// 开始执行
 		self.run(executable, input_data).map(|ret| (account_id, ret))
 	}
 
