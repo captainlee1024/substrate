@@ -229,6 +229,7 @@ pub fn root(child_info: &ChildInfo, version: StateVersion) -> Vec<u8> {
 }
 
 /// Return the length in bytes of the value without reading it. `None` if it does not exist.
+/// 返回值的长度（以字节为单位），而不读取它。 None 如果不存在。
 pub fn len(child_info: &ChildInfo, key: &[u8]) -> Option<u32> {
 	match child_info.child_type() {
 		ChildType::ParentKeyId => {

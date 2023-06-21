@@ -703,6 +703,7 @@ fn expand_functions(def: &EnvDef, expand_blocks: bool, host_state: TokenStream2)
 	}
 }
 
+/// 定义可通过ink contract代码导入的host functions集合
 /// Defines a host functions set that can be imported by contract wasm code.
 ///
 /// **NB**: Be advised that all functions defined by this macro
